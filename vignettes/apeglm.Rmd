@@ -1,0 +1,270 @@
+---
+title: "Estimation of log fold changes using apeglm"
+author: "Anqi Zhu, Joseph G. Ibrahim, Michael I. Love"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('apeglm')`"
+abstract: >
+  Put abstract here...
+output:
+  rmarkdown::html_document:
+    highlight: pygments
+    toc: true
+    fig_width: 5
+vignette: >
+  %\VignetteIndexEntry{Estimation of log fold changes using apeglm}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding[utf8]{inputenc}
+---
+
+<!-- run this document with library(rmarkdown); render("apeglm.Rmd") -->
+
+```{r setup, echo=FALSE, results="hide"}
+knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
+                      dev="png",
+                      message=FALSE, error=FALSE, warning=TRUE)
+```	
+
+# Example RNA-seq analysis
+
+Note that the typical workflow for users would be to call *apeglm* estimation
+from within the `lfcShrink` function in *DESeq2*. Here we show example 
+code which mimics what will happen inside the `lfcShrink` function 
+when using the *apeglm* method. 
+
+Load a prepared `SummarizedExperiment`:
+
+```{r}
+library(airway)
+data(airway)
+head(assay(airway))
+```
+
+Run a *DESeq2* differential expression analysis
+(size factors, and dispersion estimates could similarly
+be estimated using *edgeR*):
+
+```{r}
+library(DESeq2)
+dds <- DESeqDataSet(airway, ~cell + dex)
+dds$dex <- relevel(dds$dex, "untrt")
+dds <- dds[rowSums(counts(dds)) > 0,]
+dds <- dds[1:5000,]
+dds <- DESeq(dds)
+res <- results(dds)
+```
+
+Defining data and parameter objects necessary for `apeglm`. 
+
+```{r}
+cts <- counts(dds)
+mle <- cbind(res$log2FoldChange, res$lfcSE)
+x <- model.matrix(design(dds), colData(dds))
+offset <- matrix(log(sizeFactors(dds)),
+                 ncol=ncol(dds),
+                 nrow=nrow(dds),byrow=TRUE)
+param <- dispersions(dds)
+```
+
+# Running apeglm
+
+Here `apeglm` on 5000 genes takes ~30 seconds (laptop).
+It scales obviously with number of genes, as well as 
+number of samples and number of variables in the design 
+formula.
+
+We specify a `coef` as well as a `threshold` which we discuss
+below.
+
+```{r}
+library(apeglm)
+system.time({
+  fit <- apeglm(Y=cts, x=x,
+                log.lik=logLikNB,
+                param=param,
+                coef=ncol(x),
+                threshold=log(2),
+                mle=mle,
+                offset=offset)
+})
+str(fit$prior.control)
+```
+
+```{r}
+DESeq2.lfc <- lfcShrink(dds, coef=5)
+# note apeglm provides coefficients on the natural log scale
+apeglm.lfc <- log2(exp(1)) * fit$map[,5]
+```
+
+Here we plot *apeglm* estimators against *DESeq2*:
+
+```{r apevsdeseq}
+plot(DESeq2.lfc, apeglm.lfc)
+abline(0,1)
+```
+
+Here we plot *MLE*, *DESeq2* and *apeglm* estimators against the mean
+of normalized counts:
+
+```{r maplots, fig.width=9, fig.height=3.5}
+par(mfrow=c(1,3))
+lims <- c(-8,8)
+hline <- function() abline(h=c(-4:4 * 2),col=rgb(0,0,0,.2))
+xlab <- "mean of normalized counts"
+plot(res$baseMean, res$log2FoldChange, log="x",
+     ylim=lims, main="MLE", xlab=xlab)
+hline()
+plot(res$baseMean, DESeq2.lfc, log="x",
+     ylim=lims, main="DESeq2", xlab=xlab)
+hline()
+plot(res$baseMean, apeglm.lfc, log="x",
+     ylim=lims, main="apeglm", xlab=xlab)
+hline()
+```
+
+# Inference on specific coefficients
+
+p-values and FSR define different events, and
+are not on the same scale. An FSR of 0.5 means that the 
+estimated sign is as bad as random guess. 
+
+```{r pvalcomp, fig.width=8, fig.height=4}
+par(mfrow=c(1,2),mar=c(5,5,1,1))
+plot(res$pvalue, fit$fsr, col="blue",
+     xlab="DESeq2 pvalue", ylab="apeglm local FSR",
+     xlim=c(0,1), ylim=c(0,.5))
+abline(0,1)
+plot(-log10(res$pvalue), -log10(fit$fsr),
+     xlab="-log10 DESeq2 pvalue", ylab="-log10 apeglm local FSR",
+     col="blue")
+abline(0,1)
+```
+
+We recommend using a lower threshold on s-values than typically
+used for adjusted p-values, for example one might
+be interested in sets with 0.01 or 0.005 aggregate FSR.
+
+```{r pvalcomp2}
+plot(res$padj, fit$svalue, col="blue",
+     xlab="DESeq2 padj", ylab="apeglm svalue",
+     xlim=c(0,.2), ylim=c(0,.02))
+```
+
+More scrutiny can be applied by using an LFC threshold greater
+than zero, and asking for the probability of a false sign
+or that the effect size is not further from zero in
+distance than the threshold amount.
+
+As we already specfified a threshold of 1 on the log2 scale,
+we can see how this changes the local FSRs:
+
+```{r maplotthresh}
+cols <- ifelse(svalue(fit$thresh) < .01, "red", "black")
+plot(res$baseMean, log2(exp(1)) * fit$map[,5], log="x", col=cols,
+     xlab=xlab, ylab="LFC")
+abline(h=c(-1,0,1), col=rgb(0,0,1,.5), lwd=2)
+```
+
+# Example of modeling effect sizes on ratios of counts 
+
+We also show an short example using an alternative likelihood
+to the negative binomial. Suppose we have allele-specific counts
+for a number of samples across a number of genes. We can define a 
+binomial model and test for the allelic balance across groups 
+of samples.
+
+Here we will *simulate* allele counts from our existing dataset
+for demonstration. We spike in 10 genes with allelic imbalance.
+
+```{r}
+library(emdbook)
+n <- 20
+f <- factor(rep(1:2,each=n))
+mu <- ifelse(res$baseMean > 10, res$baseMean, 10)
+cts <- matrix(rnbinom(nrow(dds)*2*n, 
+                      mu=mu,
+                      size=1/dispersions(dds)),
+              ncol=2*n)
+theta <- runif(nrow(cts),1,100)
+prob <- rnorm(nrow(cts),.5,.01)
+ase.cts <- matrix(rbetabinom(prod(dim(cts)), prob=prob,
+                             size=cts, theta=rep(theta,ncol(cts))),
+                  nrow=nrow(cts))
+idx <- 1:10
+idx2 <- which(f == 2)
+theta[idx] <- 100
+ase.cts[idx,idx2] <- matrix(rbetabinom(length(idx)*length(idx2), prob=.75,
+                                       size=cts[idx,idx2], theta=100),
+                            nrow=length(idx))
+```
+
+We define a beta-binomial likelihood function which uses the total counts
+as a parameter:
+
+```{r}
+betabinom.log.lik <- function(y, x, beta, param, offset) {
+  xbeta <- x %*% beta
+  p.hat <- (1+exp(-xbeta))^-1
+  dbetabinom(y, prob=p.hat, size=param[-1], theta=param[1], log=TRUE)
+}
+```
+
+We first need to estimate MLE coefficients and standard errors.
+
+```{r}
+theta.hat.0 <- 100 # rough estimate of dispersion
+param <- cbind(theta.hat.0, cts)
+x <- model.matrix(~f)
+system.time({
+  fit.mle <- apeglm(Y=ase.cts, x=x,
+                    log.lik=betabinom.log.lik,
+                    param=param,
+                    no.shrink=TRUE,
+                    log.link=FALSE)
+})
+```
+
+```{r mlemaplot}
+coef <- 2
+plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="LFC")
+points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
+```
+
+```{r}
+theta.hat <- bbEstDisp(success=ase.cts, size=cts,
+                       x=x, beta=fit.mle$map,
+                       minDisp=1, maxDisp=500)
+```
+
+```{r}
+mle <- cbind(fit.mle$map[,coef], fit.mle$se[,coef])
+param <- cbind(theta.hat, cts)
+system.time({
+  fit2 <- apeglm(Y=ase.cts, x=x,
+                 log.lik=betabinom.log.lik,
+                 param=param,
+                 coef=coef,
+                 mle=mle,
+                 log.link=FALSE)
+})
+```
+
+```{r asemaplot, fig.width=8, fig.height=4}
+par(mfrow=c(1,2))
+ylim <- c(-3,3)
+plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="LFC", ylim=ylim)
+points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
+cols <- ifelse(fit2$svalue < .001, "red", "black")
+plot(res$baseMean, fit2$map[,coef], log="x", xlab=xlab, ylab="LFC",
+     col=cols, ylim=ylim)
+points(res$baseMean[idx], fit2$map[idx,coef], col="dodgerblue", cex=3)
+```
+
+```{r}
+log(.75/(1-.75))
+```
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

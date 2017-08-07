@@ -11,6 +11,7 @@
 #'
 #' @return the log likelihood for each sample in \code{y}
 #'
+#' @importFrom stats dnbinom
 #' @export
 #' 
 #' @examples 

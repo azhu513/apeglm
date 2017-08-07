@@ -27,6 +27,9 @@
 #' beta <- matrix(rep(0,n),ncol=1)
 #' theta <- bbEstDisp(success, size, x, beta, 1, 500)
 #' summary(theta)
+#'
+#' @importFrom stats optimize
+#' @importFrom emdbook dbetabinom
 #' 
 #' @export
 bbEstDisp <- function(success, size, x, beta, minDisp, maxDisp) {
