@@ -39,6 +39,13 @@ data(airway)
 head(assay(airway))
 ```
 
+For demonstration, we will just use the first 5000 genes of the `airway` dataset.
+
+```{r}
+keep <- head(which(rowSums(assay(airway)) > 0), 5000)
+airway <- airway[keep,]
+```
+
 Run a *DESeq2* differential expression analysis
 (size factors, and dispersion estimates could similarly
 be estimated using *edgeR*):
@@ -47,8 +54,6 @@ be estimated using *edgeR*):
 library(DESeq2)
 dds <- DESeqDataSet(airway, ~cell + dex)
 dds$dex <- relevel(dds$dex, "untrt")
-dds <- dds[rowSums(counts(dds)) > 0,]
-dds <- dds[1:5000,]
 dds <- DESeq(dds)
 res <- results(dds)
 ```
@@ -56,7 +61,6 @@ res <- results(dds)
 Defining data and parameter objects necessary for `apeglm`. 
 
 ```{r}
-cts <- counts(dds)
 mle <- cbind(res$log2FoldChange, res$lfcSE)
 x <- model.matrix(design(dds), colData(dds))
 offset <- matrix(log(sizeFactors(dds)),
@@ -72,13 +76,16 @@ It scales obviously with number of genes, as well as
 number of samples and number of variables in the design 
 formula.
 
+We provide `apeglm` with the *SummarizedExperiment* although the
+function can also run on a *matrix* of counts or other observed data.
+
 We specify a `coef` as well as a `threshold` which we discuss
 below.
 
 ```{r}
 library(apeglm)
 system.time({
-  fit <- apeglm(Y=cts, x=x,
+  fit <- apeglm(Y=airway, x=x,
                 log.lik=logLikNB,
                 param=param,
                 coef=ncol(x),

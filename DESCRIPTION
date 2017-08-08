@@ -1,6 +1,6 @@
 Package: apeglm
 Title: Approximate posterior estimation for GLM coefficients
-Version: 0.0.10
+Version: 0.0.11
 Authors@R: c(person("Anqi Zhu", "Developer", role = c("aut", "cre"), email = "anqizhu@live.unc.edu"),
              person("Joseph G. Ibrahim", "Developer", role = "aut", email = "jibrahim@email.unc.edu"),
              person("Michael I. Love", "Developer", role = "aut", email = "michaelisaiahlove@gmail.com"))
