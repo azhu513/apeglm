@@ -22,11 +22,13 @@
 #' \code{prior.control <- list(no.shrink=1,prior.mean=0,prior.scale=1,
 #'       prior.df=1,prior.no.shrink.mean=0,prior.no.shrink.scale=15)}
 #' 
-#' @param Y the matrix for the outcome. Columns for samples and rows for "features"
-#' (e.g. genes in a genomic context)
+#' @param Y the object in either class of "SummarizedExperiment" or "RangedSummarizedExperiment", 
+#'or a matrix for the outcome where columns for samples and rows for "features".
+#'(e.g. genes in a genomic context). In the first two cases, \code{apeglm} will extract the counts 
+#'for the user, and return the result in an object of the same class
 #' @param x design matrix, with intercept in the first column
 #' @param log.lik the log of likelihood function, specified by the user.
-#' TODO we should provide some and list them here
+#' For Negative Binomial distribution, user can use \code{logLikNB} provided within the package.
 #' @param param the other parameter(s) to be used in the likelihood function,
 #' e.g. the dispersion parameter for a negative binomial distribution.
 #' this can be a vector or a matrix (with columns as parameters)
@@ -76,9 +78,12 @@
 #'   \item \code{contrast.se}: a vector of SE corresponding to the \code{contrast}
 #' when \code{contrast} is given
 #' }
-#'
+#' 
+#' @import GenomicRanges SummarizedExperiment 
+#' 
 #' @importFrom stats dnorm pnorm qnorm sd dt optim uniroot
 #' @importFrom utils head tail
+#' @importFrom methods is
 #' 
 #' @export
 #' 
@@ -183,6 +188,13 @@ apeglm <- function(Y, x, log.lik,
   
   nvars <- ncol(x)
   
+  if (is(Y, "SummarizedExperiment")) {
+    Y <- assay(Y)
+  } else if (is(Y, "RangedSummarizedExperiment")) {
+    gr <- rowRanges(Y)
+    Y <- assay(Y)
+  }
+  
   Y <- as.matrix(Y)
   rownames <- dimnames(Y)[[1]]
   nrows <- nrow(Y)
@@ -206,7 +218,7 @@ apeglm <- function(Y, x, log.lik,
   
   result <- list()
   result$map <- matrix(nrow=nrows, ncol=nvars,
-                       dimnames=list(rownames, xnames))
+                         dimnames=list(rownames, xnames))
   result$se <- matrix(nrow=nrows, ncol=nvars,
                       dimnames=list(rownames, xnames))
   result$prior.control <- prior.control
@@ -291,7 +303,10 @@ apeglm <- function(Y, x, log.lik,
   if (!is.null(coef)) {
     result$svalue[,1] <- svalue(result$fsr)
   }
-  
+  if (is(Y, "RangedSummarizedExperiment")) {
+    mcols(gr) <- result$map
+    result$gr <- gr
+  }
   return(result)
 }
 

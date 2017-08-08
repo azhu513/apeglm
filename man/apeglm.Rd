@@ -11,13 +11,15 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   nse.nuis = 2, log.link = TRUE, param.sd = NULL)
 }
 \arguments{
-\item{Y}{the matrix for the outcome. Columns for samples and rows for "features"
-(e.g. genes in a genomic context)}
+\item{Y}{the object in either class of "SummarizedExperiment" or "RangedSummarizedExperiment", 
+or a matrix for the outcome where columns for samples and rows for "features".
+(e.g. genes in a genomic context). In the first two cases, \code{apeglm} will extract the counts 
+for the user, and return the result in an object of the same class}
 
 \item{x}{design matrix, with intercept in the first column}
 
 \item{log.lik}{the log of likelihood function, specified by the user.
-TODO we should provide some and list them here}
+For Negative Binomial distribution, user can use \code{logLikNB} provided within the package.}
 
 \item{param}{the other parameter(s) to be used in the likelihood function,
 e.g. the dispersion parameter for a negative binomial distribution.
