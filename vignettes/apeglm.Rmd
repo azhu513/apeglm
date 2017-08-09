@@ -64,9 +64,13 @@ res <- results(dds)
 ```
 
 Defining data and parameter objects necessary for `apeglm`. 
+We must multiply the coefficients from *DESeq2* by a factor,
+because *apeglm* provides natural log coefficients. Again,
+this would be handled inside of `lfcShrink` in *DESeq2* for a typical
+RNA-seq analysis.
 
 ```{r}
-mle <- cbind(res$log2FoldChange, res$lfcSE)
+mle <- log(2) * cbind(res$log2FoldChange, res$lfcSE)
 x <- model.matrix(design(dds), colData(dds))
 offset <- matrix(log(sizeFactors(dds)),
                  ncol=ncol(dds),
@@ -109,11 +113,12 @@ class(fit$ranges)
 mcols(fit$ranges, use.names=TRUE)
 ```
 
-We can compare the coefficients from *apeglm* with those from *DESeq2*:
+We can compare the coefficients from *apeglm* with those from *DESeq2*.
+*apeglm* provides coefficients on the natural log scale, so we convert
+to log2 scale by multiplying by a factor.
 
 ```{r}
 DESeq2.lfc <- lfcShrink(dds, coef=5)
-# note apeglm provides coefficients on the natural log scale
 apeglm.lfc <- log2(exp(1)) * fit$map[,5]
 ```
 
