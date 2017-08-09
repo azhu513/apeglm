@@ -1,19 +1,24 @@
 ---
-title: "Estimation of log fold changes using apeglm"
-author: "Anqi Zhu, Joseph G. Ibrahim, Michael I. Love"
-date: "`r BiocStyle::doc_date()`"
-package: "`r BiocStyle::pkg_ver('apeglm')`"
-abstract: >
-  Put abstract here...
+title: "Effect size estimation with apeglm"
+author: 
+- name: Anqi Zhu
+  affiliation: Department of Biostatistics, UNC-Chapel Hill
+- name: Joseph G. Ibrahim
+  affiliation: Department of Biostatistics, UNC-Chapel Hill
+- name: Michael I. Love
+  affiliation: Department of Biostatistics, UNC-Chapel Hill
 output:
-  rmarkdown::html_document:
-    highlight: pygments
-    toc: true
-    fig_width: 5
-vignette: >
-  %\VignetteIndexEntry{Estimation of log fold changes using apeglm}
+  BiocStyle::html_document2:
+    toc_float: true
+package: apeglm
+abstract: |
+  *apeglm* provides Bayesian shrinkage estimators for effect sizes for a
+  variety of GLM models; *apeglm* stands for "approximate posterior
+  estimation for GLM".
+vignette: |
+  %\VignetteIndexEntry{Effect size estimation with apeglm}
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding[utf8]{inputenc}
+  %\VignetteEncoding{UTF-8}
 ---
 
 <!-- run this document with library(rmarkdown); render("apeglm.Rmd") -->
@@ -22,7 +27,7 @@ vignette: >
 knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
                       dev="png",
                       message=FALSE, error=FALSE, warning=TRUE)
-```	
+```
 
 # Example RNA-seq analysis
 
@@ -96,6 +101,16 @@ system.time({
 str(fit$prior.control)
 ```
 
+Among other output, we have the estimated coefficients attached to the
+ranges of the *SummarizedExperiment* used as input:
+
+```{r}
+class(fit$ranges)
+mcols(fit$ranges, use.names=TRUE)
+```
+
+We can compare the coefficients from *apeglm* with those from *DESeq2*:
+
 ```{r}
 DESeq2.lfc <- lfcShrink(dds, coef=5)
 # note apeglm provides coefficients on the natural log scale
@@ -128,9 +143,9 @@ plot(res$baseMean, apeglm.lfc, log="x",
 hline()
 ```
 
-# Inference on specific coefficients
+# Specific coefficients
 
-p-values and FSR define different events, and
+Note that p-values and FSR define different events, and
 are not on the same scale. An FSR of 0.5 means that the 
 estimated sign is as bad as random guess. 
 
@@ -171,7 +186,7 @@ plot(res$baseMean, log2(exp(1)) * fit$map[,5], log="x", col=cols,
 abline(h=c(-1,0,1), col=rgb(0,0,1,.5), lwd=2)
 ```
 
-# Example of modeling effect sizes on ratios of counts 
+# Modeling ratios of counts 
 
 We also show an short example using an alternative likelihood
 to the negative binomial. Suppose we have allele-specific counts

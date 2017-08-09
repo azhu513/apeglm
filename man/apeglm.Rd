@@ -11,10 +11,11 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   nse.nuis = 2, log.link = TRUE, param.sd = NULL)
 }
 \arguments{
-\item{Y}{the object in either class of "SummarizedExperiment" or "RangedSummarizedExperiment", 
-or a matrix for the outcome where columns for samples and rows for "features".
-(e.g. genes in a genomic context). In the first two cases, \code{apeglm} will extract the counts 
-for the user, and return the result in an object of the same class}
+\item{Y}{the observations, which can be a matrix or SummarizedExperiment,
+with columns for samples and rows for "features" (e.g. genes in a genomic context).
+If Y is a SummarizedExperiment, \code{apeglm} will return, in addition
+to other list items, a GRanges or GRangesList \code{ranges} with the
+estimated coefficients as metadata columns.}
 
 \item{x}{design matrix, with intercept in the first column}
 
@@ -87,6 +88,8 @@ when MAP is positive (or greater than
 when \code{contrast} is given 
   \item \code{contrast.se}: a vector of SE corresponding to the \code{contrast}
 when \code{contrast} is given
+  \item \code{ranges}: a GRanges or GRangesList with the estimated coefficients,
+if \code{Y} was a SummarizedExperiment.
 }
 }
 \description{

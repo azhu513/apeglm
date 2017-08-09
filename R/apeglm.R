@@ -22,10 +22,11 @@
 #' \code{prior.control <- list(no.shrink=1,prior.mean=0,prior.scale=1,
 #'       prior.df=1,prior.no.shrink.mean=0,prior.no.shrink.scale=15)}
 #' 
-#' @param Y the object in either class of "SummarizedExperiment" or "RangedSummarizedExperiment", 
-#'or a matrix for the outcome where columns for samples and rows for "features".
-#'(e.g. genes in a genomic context). In the first two cases, \code{apeglm} will extract the counts 
-#'for the user, and return the result in an object of the same class
+#' @param Y the observations, which can be a matrix or SummarizedExperiment,
+#' with columns for samples and rows for "features" (e.g. genes in a genomic context).
+#' If Y is a SummarizedExperiment, \code{apeglm} will return, in addition
+#' to other list items, a GRanges or GRangesList \code{ranges} with the
+#' estimated coefficients as metadata columns.
 #' @param x design matrix, with intercept in the first column
 #' @param log.lik the log of likelihood function, specified by the user.
 #' For Negative Binomial distribution, user can use \code{logLikNB} provided within the package.
@@ -77,10 +78,12 @@
 #' when \code{contrast} is given 
 #'   \item \code{contrast.se}: a vector of SE corresponding to the \code{contrast}
 #' when \code{contrast} is given
+#'   \item \code{ranges}: a GRanges or GRangesList with the estimated coefficients,
+#' if \code{Y} was a SummarizedExperiment.
 #' }
 #' 
-#' @import GenomicRanges SummarizedExperiment 
-#' 
+#' @importFrom SummarizedExperiment assay rowRanges
+#' @importFrom GenomicRanges mcols<-
 #' @importFrom stats dnorm pnorm qnorm sd dt optim uniroot
 #' @importFrom utils head tail
 #' @importFrom methods is
@@ -187,11 +190,13 @@ apeglm <- function(Y, x, log.lik,
   xnames <- dimnames(x)[[2]]
   
   nvars <- ncol(x)
-  
+
+  hasRanges <- FALSE
   if (is(Y, "SummarizedExperiment")) {
-    Y <- assay(Y)
-  } else if (is(Y, "RangedSummarizedExperiment")) {
-    gr <- rowRanges(Y)
+    if (is(Y, "RangedSummarizedExperiment")) {
+      ranges <- rowRanges(Y)
+      hasRanges <- TRUE
+    }
     Y <- assay(Y)
   }
   
@@ -303,10 +308,12 @@ apeglm <- function(Y, x, log.lik,
   if (!is.null(coef)) {
     result$svalue[,1] <- svalue(result$fsr)
   }
-  if (is(Y, "RangedSummarizedExperiment")) {
-    mcols(gr) <- result$map
-    result$gr <- gr
+
+  if (hasRanges) {
+    mcols(ranges) <- result$map
+    result$ranges <- ranges
   }
+
   return(result)
 }
 
