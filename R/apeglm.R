@@ -142,7 +142,7 @@ apeglm <- function(Y, x, log.lik,
                    coef=NULL,
                    mle=NULL,
                    no.shrink=FALSE,
-                   interval.type = "laplace",
+                   interval.type=c('laplace', 'HPD', 'credible'),
                    interval.level=0.95,
                    threshold=NULL, contrasts,
                    weights=NULL, offset=NULL,
@@ -179,8 +179,8 @@ apeglm <- function(Y, x, log.lik,
   }
 
   stopifnot(ncol(Y) == nrow(x))
+  interval.type <- match.arg(interval.type)
   
-  stopifnot(interval.type %in% c("laplace", "HPD", "credible"))
   if (!is.matrix(param)) param <- as.matrix(param, ncol=1)
   # don't have code yet for use of threshold with param.sd
   stopifnot(is.null(param.sd) | is.null(threshold))

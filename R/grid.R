@@ -339,15 +339,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
   
   if (is.null(param.sd)) {
     log.unpo.mat <- matrix(nrow=nng, ncol=length(betas))
-    for (i in seq_len(nng)) {
-      log.unpo.mat[i,] <- sapply(betas, function(b) {
-        beta.vec <- map + nuis.grid.big[i,] * se
-        beta.vec[coef] <- b
-        log.post(beta.vec, log.lik = log.lik, log.prior = log.prior, 
-                 y = y, x = x, param = param, 
-                 prior.control = prior.control, 
-                 weights = weights, offset = offset)})
-    }
+    log.unpo.mat <- fillLogUnpo(ng = nng, LUM = log.unpo.mat, NGB = nuis.grid.big, param = param)
     log.unpo.mat <- log.unpo.mat - max(log.unpo.mat)
     unpo.mat <- exp(log.unpo.mat)
     unpo <- colSums(unpo.mat)
@@ -360,15 +352,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
     for (j in seq_len(npg)) {
       param.star <- param + param.sd * param.grid[j]
       log.unpo.mat <- matrix(nrow=nng, ncol=length(betas))
-      for (i in seq_len(nng)) {
-        log.unpo.mat[i,] <- sapply(betas, function(b) {
-          beta.vec <- map + nuis.grid.big[i,] * se
-          beta.vec[coef] <- b
-          log.post(beta.vec, log.lik = log.lik, log.prior = log.prior, 
-                   y = y, x = x, param = param.star, 
-                   prior.control = prior.control, 
-                   weights = weights, offset = offset)})
-      }
+      log.unpo.mat <- fillLogUnpo(ng = nng, LUM = log.unpo.mat, NGB = nuis.grid.big, param = param.star)
       log.unpo.mat <- log.unpo.mat - max(log.unpo.mat)
       unpo.mat <- exp(log.unpo.mat)
       unpo <- colSums(unpo.mat)
@@ -383,4 +367,20 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
   }
   
   unpo
+}
+
+fillLogUnpo <- function(ng, LUM , betas = betas, NGB , 
+                        map = map, se = se, coef = coef, log.lik = log.lik, log.prior = log.prior, 
+                        y = y, x = x, param , prior.control = prior.control, 
+                        weights = weights, offset = offset){
+  for (i in seq_len(ng)) {
+    LUM[i,] <- sapply(betas, function(b) {
+      beta.vec <- map + NGB[i, ] * se
+      beta.vec[coef] <- b
+      log.post(beta.vec, log.lik = log.lik, log.prior = log.prior, 
+               y = y, x = x, param = param, 
+               prior.control = prior.control, 
+               weights = weights, offset = offset)})
+  }
+  LUM
 }

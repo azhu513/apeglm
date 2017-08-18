@@ -24,7 +24,7 @@
 #' 
 svalue <- function(lfsr) {
   lfsr.sorted <- sort(lfsr, na.last = TRUE)
-  cumsum.idx <- 1:length(lfsr)
+  cumsum.idx <- seq_along(lfsr)
   cumsum.lfsr <- cumsum(lfsr.sorted)
   (cumsum.lfsr/cumsum.idx)[rank(lfsr, ties.method = "first", na.last = TRUE)]
 }
