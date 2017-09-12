@@ -48,4 +48,21 @@ test_that("example on beta-binomial", {
                  coef=coef,
                  mle=mle,
                  log.link=FALSE)
+  expect_error(Y=ase.cts, x=x,
+               log.lik=betabinom.log.lik,
+               param=param,
+               coef=1,
+               mle=mle,
+               log.link=FALSE)
+  expect_error(Y=ase.cts, x=x,
+               log.lik=betabinom.log.lik,
+               param=param,
+               coef=2,
+               log.link=FALSE)
+  expect_error(Y=ase.cts, x=x,
+               log.lik=betabinom.log.lik,
+               param=param,
+               coef=2,
+               mle = mle,
+               log.link=TRUE)
 })

@@ -14,11 +14,35 @@ test_that("nbinom cases works", {
   Y <- matrix(rnbinom(m*n, mu=mu, size=1/.1), ncol = n)
 
   param <- matrix(0.1, nrow = m, ncol = 1)
-  offset <- matrix(0, nrow = m, ncol = n)
-
-  res <- apeglm(Y = Y, x = x,
+  
+  offset <- matrix(0, nrow = n, ncol = m)
+  expect_error(apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
                 param = param,
                 offset = offset,
-                coef = 2)
+                coef = 1)) 
+				
+  offset <- matrix(0, nrow = m, ncol = n)
+  expect_error(apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                offset = offset,
+                coef = 2))  				
+  expect_error(apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                param = param,
+                offset = offset,
+                coef = 1))
+  expect_error(apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                param = param,
+                offset = offset,
+                coef = 2, threshold = 0))
+  expect_error(apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                param = param,
+                offset = offset,
+                coef = 2, threshold = 0, param.sd = 0.1))
+  
+   
+  
 })
