@@ -4,8 +4,9 @@ priorVar <- function(mle, min.var=.01^2, max.var=20^2) {
   # here using notation and estimator from Efron and Morris:
   # "Data Analysis Using Stein's Estimator and its Generalizations" 1975
   stopifnot(ncol(mle) == 2) # expecting MLE estimates and SE as two columns of matrix
-  X <- mle[,1]
-  D <- mle[,2]^2
+  keep <- !is.na(mle[,1])
+  X <- mle[keep,1]
+  D <- mle[keep,2]^2
   S <- X^2
   I <- function(A) 1/(2*(A + D)^2)
   Ahat <- function(A) sum((S - D) * I(A)) / sum(I(A))
