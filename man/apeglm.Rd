@@ -32,7 +32,8 @@ to generate posterior estimates (FSR and intervals)}
 \item{mle}{(optional) a 2 column matrix giving the MLE and its standard error
 of \code{coef}. this will be used to adapt the scale of the prior (empirical Bayes).
 This overrides the \code{prior.scale} specified by \code{prior.control}
-and sets \code{no.shrink} to all coefficients other than \code{coef}}
+and sets \code{no.shrink} to all coefficients other than \code{coef}.
+Note that these MLE's and SE's should be on the natural log scale for a log link GLM.}
 
 \item{no.shrink}{logical, if TRUE, apeglm won't perform shrinkage (default is FALSE)}
 
@@ -43,13 +44,15 @@ Laplace approximation of the posterior mode}
 \item{interval.level}{(optional) default is 0.95}
 
 \item{threshold}{(optional) a threshold for integrating posterior probabilities,
-see details under 'Value'}
+see details under 'Value'.
+Note that this should be on the natural log scale for a log link GLM.}
 
 \item{contrasts}{(optional) contrast matrix, same number of rows as \code{x}}
 
 \item{weights}{(optional) weights matrix, same shape as \code{Y}}
 
-\item{offset}{(optional) offsets matrix, same shape as \code{Y}}
+\item{offset}{(optional) offsets matrix, same shape as \code{Y}.
+Note that this should be on the natural log scale for a log link GLM.}
 
 \item{flip.sign}{whether to flip the sign of threshold value
 when MAP is negative, default is TRUE (threshold must then be positive)}
@@ -91,6 +94,9 @@ when \code{contrast} is given
   \item \code{ranges}: a GRanges or GRangesList with the estimated coefficients,
 if \code{Y} was a SummarizedExperiment.
 }
+
+Note that all parameters associated with coefficients,
+e.g. \code{map}, \code{se}, etc., are returned on the natural log scale for a log link GLM.
 }
 \description{
 apeglm provides Bayesian shrinkage estimators for effect sizes
@@ -115,6 +121,8 @@ So without specifying \code{prior.control}, the following is set inside \code{ap
 
 \code{prior.control <- list(no.shrink=1,prior.mean=0,prior.scale=1,
       prior.df=1,prior.no.shrink.mean=0,prior.no.shrink.scale=15)}
+
+Note that the prior should be defined on the natural log scale for a log link GLM.
 }
 \examples{
 

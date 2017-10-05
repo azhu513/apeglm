@@ -8,7 +8,7 @@ author:
 - name: Michael I. Love
   affiliation: Department of Biostatistics, UNC-Chapel Hill
 output:
-  BiocStyle::html_document2:
+  BiocStyle::html_document:
     toc_float: true
 package: apeglm
 abstract: |
@@ -29,12 +29,23 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
                       message=FALSE, error=FALSE, warning=TRUE)
 ```
 
+# Typical RNA-seq call from DESeq2
+
+**Note:** the typical RNA-seq workflow for users would be to call
+*apeglm* estimation from within the `lfcShrink` function in *DESeq2*,
+with the following code (not run here). See the DESeq2 vignette for
+more details. The `lfcShrink` wrapper function takes care of many
+details below, and unifies the interface for multiple shrinkage
+estimators. 
+
+```{r,eval=FALSE}
+res <- lfcShrink(dds, coef=2, type="apeglm")
+```
+
 # Example RNA-seq analysis
 
-Note that the typical workflow for users would be to call *apeglm* estimation
-from within the `lfcShrink` function in *DESeq2*. Here we show example 
-code which mimics what will happen inside the `lfcShrink` function 
-when using the *apeglm* method. 
+Here we show example code which mimics what will happen inside the
+`lfcShrink` function when using the *apeglm* method. 
 
 Load a prepared `SummarizedExperiment`:
 
@@ -70,26 +81,27 @@ this would be handled inside of `lfcShrink` in *DESeq2* for a typical
 RNA-seq analysis.
 
 ```{r}
-mle <- log(2) * cbind(res$log2FoldChange, res$lfcSE)
 x <- model.matrix(design(dds), colData(dds))
+param <- dispersions(dds)
+mle <- log(2) * cbind(res$log2FoldChange, res$lfcSE)
 offset <- matrix(log(sizeFactors(dds)),
                  ncol=ncol(dds),
                  nrow=nrow(dds),byrow=TRUE)
-param <- dispersions(dds)
 ```
 
 # Running apeglm
 
-Here `apeglm` on 5000 genes takes ~30 seconds (laptop).
-It scales obviously with number of genes, as well as 
-number of samples and number of variables in the design 
-formula.
+Here `apeglm` on 5000 genes takes less than a minute on a laptop.
+It scales with number of genes, the number of samples and the number
+of variables in the design formula, where here we have 5 coefficients
+(one for the four cell cultures and one for the difference due to
+dexamethasone treatment).
 
 We provide `apeglm` with the *SummarizedExperiment* although the
 function can also run on a *matrix* of counts or other observed data.
-
 We specify a `coef` as well as a `threshold` which we discuss
-below.
+below. Note that we multiple the `threshold` by `log(2)` to convert
+from log2 scale to natural log scale. 
 
 ```{r}
 library(apeglm)
@@ -98,7 +110,7 @@ system.time({
                 log.lik=logLikNB,
                 param=param,
                 coef=ncol(x),
-                threshold=log(2),
+                threshold=log(2) * 1,
                 mle=mle,
                 offset=offset)
 })
@@ -114,8 +126,10 @@ mcols(fit$ranges, use.names=TRUE)
 ```
 
 We can compare the coefficients from *apeglm* with those from *DESeq2*.
-*apeglm* provides coefficients on the natural log scale, so we convert
-to log2 scale by multiplying by a factor.
+*apeglm* provides coefficients on the natural log scale, so we must
+convert to log2 scale by multiplying by `log2(exp(1))`. Note that
+*DESeq2*'s `lfcShrink` function converts *apeglm* coefficients to the log2
+scale internally.
 
 ```{r}
 DESeq2.lfc <- lfcShrink(dds, coef=5)
@@ -195,7 +209,7 @@ abline(h=c(-1,0,1), col=rgb(0,0,1,.5), lwd=2)
 
 We also show an short example using an alternative likelihood
 to the negative binomial. Suppose we have allele-specific counts
-for a number of samples across a number of genes. We can define a 
+for n=20 vs 20 samples across 5000 genes. We can define a 
 binomial model and test for the allelic balance across groups 
 of samples.
 
@@ -207,6 +221,7 @@ library(emdbook)
 n <- 20
 f <- factor(rep(1:2,each=n))
 mu <- ifelse(res$baseMean > 10, res$baseMean, 10)
+set.seed(1)
 cts <- matrix(rnbinom(nrow(dds)*2*n, 
                       mu=mu,
                       size=1/dispersions(dds)),
