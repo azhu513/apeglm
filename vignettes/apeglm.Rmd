@@ -132,8 +132,8 @@ convert to log2 scale by multiplying by `log2(exp(1))`. Note that
 scale internally.
 
 ```{r}
-res <- lfcShrink(dds, coef=5)
-DESeq2.lfc <- res$log2FoldChange
+res.shr <- lfcShrink(dds, coef=5)
+DESeq2.lfc <- res.shr$log2FoldChange
 apeglm.lfc <- log2(exp(1)) * fit$map[,5]
 ```
 
