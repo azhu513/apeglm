@@ -66,6 +66,8 @@
 #' @param log.link whether the GLM has a log link (default = TRUE)
 #' @param param.sd (optional) potential uncertainty measure on the parameter \code{param}.
 #' this should only be a vector, used when \code{param} specifies a single parameter
+#' @param optim.method the method passed to \code{optim}
+#' @param bounds the bounds for the numeric optimization 
 #'  
 #' @return a list of matrices containing the following components:
 #' \itemize{
@@ -159,8 +161,10 @@ apeglm <- function(Y, x, log.lik,
                    ngrid=50, nse=5,
                    ngrid.nuis=5, nse.nuis=2,
                    log.link=TRUE,
-                   param.sd=NULL) {
-  
+                   param.sd=NULL,
+                   optim.method="BFGS",
+                   bounds=c(-Inf,Inf)) {
+
   if (missing(prior.control)) {
     prior.control <- list(
       no.shrink = 1,
@@ -292,7 +296,9 @@ apeglm <- function(Y, x, log.lik,
                                 ngrid.nuis=ngrid.nuis, nse.nuis=nse.nuis,
                                 log.link=log.link,
                                 param.sd=param.sd.i,
-                                intercept=intercept[i])
+                                intercept=intercept[i],
+                                optim.method=optim.method,
+                                bounds=bounds)
     result$map[i,] <- row.result$map
     result$se[i,] <- row.result$se
     if (!is.null(coef)) {
@@ -366,7 +372,9 @@ apeglm.single <- function(y, x, log.lik,
                           ngrid.nuis, nse.nuis,
                           log.link=TRUE,
                           param.sd,
-                          intercept) {
+                          intercept,
+                          optim.method,
+                          bounds) {
 
   if (log.link & all(y == 0)) {
     out <- list(map=NA, se=NA)
@@ -401,12 +409,16 @@ apeglm.single <- function(y, x, log.lik,
   }
 
   # numerical optimization to find the MAP and SE
+  if (optim.method != "L-BFGS-B") {
+    bounds <- c(-Inf, Inf)
+  }
   o <- optim(par = init, fn = log.post, log.lik = log.lik, log.prior = log.prior, 
              y = y, x = x, param = param,
              weights = weights, offset = offset, 
              prior.control = prior.control, 
-             control=list(fnscale=-1), 
-             hessian=TRUE, method="L-BFGS-B")
+             control=list(fnscale=-1),
+             lower=bounds[1], upper=bounds[2],
+             hessian=TRUE, method=optim.method)
   
   map <- o$par
   sigma <- -solve(o$hessian)
