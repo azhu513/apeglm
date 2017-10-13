@@ -8,7 +8,8 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   no.shrink = FALSE, interval.type = c("laplace", "HPD", "credible"),
   interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
   offset = NULL, flip.sign = TRUE, prior.control, ngrid = 50, nse = 5,
-  ngrid.nuis = 5, nse.nuis = 2, log.link = TRUE, param.sd = NULL)
+  ngrid.nuis = 5, nse.nuis = 2, log.link = TRUE, param.sd = NULL,
+  optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
 \item{Y}{the observations, which can be a matrix or SummarizedExperiment,
@@ -73,6 +74,10 @@ left and right edges of the grid around the MAP of the nuisance parameters}
 
 \item{param.sd}{(optional) potential uncertainty measure on the parameter \code{param}.
 this should only be a vector, used when \code{param} specifies a single parameter}
+
+\item{optim.method}{the method passed to \code{optim}}
+
+\item{bounds}{the bounds for the numeric optimization}
 }
 \value{
 a list of matrices containing the following components:
