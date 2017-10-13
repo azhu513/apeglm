@@ -12,37 +12,69 @@ test_that("nbinom cases works", {
 
   mu <- exp(t(x %*% t(beta.mat)))
   Y <- matrix(rnbinom(m*n, mu=mu, size=1/.1), ncol = n)
-
   param <- matrix(0.1, nrow = m, ncol = 1)
-  
-  offset <- matrix(0, nrow = n, ncol = m)
-  expect_error(apeglm(Y = Y, x = x,
-                log.lik = logLikNB,
-                param = param,
-                offset = offset,
-                coef = 1)) 
-				
   offset <- matrix(0, nrow = m, ncol = n)
+
+  # a good run:
+  fit <- apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                offset = offset,
+                param = param,
+                coef = 2)
+
+  # other interval types:
+  fit <- apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                offset = offset,
+                param = param,
+                coef = 2,
+                interval.type="HPD")
+
+  fit <- apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                offset = offset,
+                param = param,
+                coef = 2,
+                interval.type="credible")
+  
+  #################
+  ## some errors ##
+  #################
+  
+  # error for missing param
   expect_error(apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
                 offset = offset,
-                coef = 2))  				
+                coef = 2))
+
+  # error for coef not > 1
+  expect_error(apeglm(Y = Y, x = x,
+                      log.lik = logLikNB,
+                      param = param,
+                      offset = offset,
+                      coef = 1))
+  
+  # error for threshold not > 0
   expect_error(apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
                 param = param,
                 offset = offset,
-                coef = 1))
-  expect_error(apeglm(Y = Y, x = x,
-                log.lik = logLikNB,
-                param = param,
-                offset = offset,
-                coef = 2, threshold = 0))
+                coef = 2, threshold = -1))
+
+  # error for threshold & param.sd at same time
   expect_error(apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
                 param = param,
                 offset = offset,
                 coef = 2, threshold = 0, param.sd = 0.1))
-  
-   
+
+  offset <- matrix(0, nrow = n, ncol = m)
+
+  # error for wrong shape of offset
+  expect_error(apeglm(Y = Y, x = x,
+                log.lik = logLikNB,
+                param = param,
+                offset = offset,
+                coef = 2)) 
   
 })
