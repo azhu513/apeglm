@@ -339,7 +339,15 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
   
   if (is.null(param.sd)) {
     log.unpo.mat <- matrix(nrow=nng, ncol=length(betas))
-    log.unpo.mat <- fillLogUnpo(ng = nng, LUM = log.unpo.mat, NGB = nuis.grid.big, param = param)
+    log.unpo.mat <- fillLogUnpo(ng = nng,
+                                LUM = log.unpo.mat,
+                                betas = betas,
+                                NGB = nuis.grid.big,
+                                map = map, se = se, coef = coef,
+                                log.lik = log.lik, log.prior = log.prior,
+                                y = y, x = x, param = param,
+                                prior.control = prior.control,
+                                weights = weights, offset = offset)
     log.unpo.mat <- log.unpo.mat - max(log.unpo.mat)
     unpo.mat <- exp(log.unpo.mat)
     unpo <- colSums(unpo.mat)
@@ -352,7 +360,15 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
     for (j in seq_len(npg)) {
       param.star <- param + param.sd * param.grid[j]
       log.unpo.mat <- matrix(nrow=nng, ncol=length(betas))
-      log.unpo.mat <- fillLogUnpo(ng = nng, LUM = log.unpo.mat, NGB = nuis.grid.big, param = param.star)
+      log.unpo.mat <- fillLogUnpo(ng = nng,
+                                  LUM = log.unpo.mat,
+                                  betas = betas,
+                                  NGB = nuis.grid.big,
+                                  map = map, se = se, coef = coef,
+                                  log.lik = log.lik, log.prior = log.prior,
+                                  y = y, x = x, param = param.star,
+                                  prior.control = prior.control,
+                                  weights = weights, offset = offset)
       log.unpo.mat <- log.unpo.mat - max(log.unpo.mat)
       unpo.mat <- exp(log.unpo.mat)
       unpo <- colSums(unpo.mat)
@@ -369,10 +385,13 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
   unpo
 }
 
-fillLogUnpo <- function(ng, LUM , betas = betas, NGB , 
-                        map = map, se = se, coef = coef, log.lik = log.lik, log.prior = log.prior, 
-                        y = y, x = x, param , prior.control = prior.control, 
-                        weights = weights, offset = offset){
+# acronyms here
+# LUM = log un-normalized posterior matrix
+# NGB = nuisance grid, big
+fillLogUnpo <- function(ng, LUM, betas, NGB, 
+                        map, se, coef, log.lik, log.prior, 
+                        y, x, param , prior.control, 
+                        weights, offset){
   for (i in seq_len(ng)) {
     LUM[i,] <- sapply(betas, function(b) {
       beta.vec <- map + NGB[i, ] * se
