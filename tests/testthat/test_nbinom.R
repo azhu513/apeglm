@@ -21,7 +21,8 @@ test_that("nbinom cases works", {
                 offset = offset,
                 param = param,
                 coef = 2)
-
+  plot(beta.cond, fit$map[,2])
+  
   # other interval types:
   fit <- apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
@@ -40,6 +41,12 @@ test_that("nbinom cases works", {
   #################
   ## some errors ##
   #################
+
+  # missing 'offset'
+  expect_error(apeglm(Y = Y, x = x,
+                      log.lik = logLikNB,
+                      param = param,
+                      coef = 2), "offset")
   
   # error for missing param
   expect_error(apeglm(Y = Y, x = x,
@@ -68,9 +75,8 @@ test_that("nbinom cases works", {
                 offset = offset,
                 coef = 2, threshold = 0, param.sd = 0.1))
 
-  offset <- matrix(0, nrow = n, ncol = m)
-
   # error for wrong shape of offset
+  offset <- matrix(0, nrow = n, ncol = m)
   expect_error(apeglm(Y = Y, x = x,
                 log.lik = logLikNB,
                 param = param,
