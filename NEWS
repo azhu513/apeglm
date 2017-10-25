@@ -1,0 +1,5 @@
+CHANGES IN VERSION 1.0.0
+-------------------------
+
+    o apeglm is released on Bioconductor! Methods can be accessed
+      from within DESeq2 by calling 'lfcShrink' with type="apeglm".
