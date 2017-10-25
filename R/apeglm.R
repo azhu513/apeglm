@@ -226,6 +226,13 @@ apeglm <- function(Y, x, log.lik,
     stopifnot(nrow(offset)==nrow(Y))
   }
 
+  offset.in.log.lik <- any(grepl("offset",as.character(body(log.lik))))
+  if (offset.in.log.lik) {
+    if (is.null(offset)) {
+      stop("log.lik uses 'offset', so 'offset' should be non-NULL")
+    }
+  }
+  
   intercept.idx <- rowSums(x == 0) == nvars - 1
   if (nrows >= 2) {
     intercept <- rowMeans(Y[,intercept.idx,drop=FALSE])
