@@ -7,9 +7,9 @@
 apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   no.shrink = FALSE, interval.type = c("laplace", "HPD", "credible"),
   interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
-  offset = NULL, flip.sign = TRUE, prior.control, ngrid = 50, nsd = 5,
-  ngrid.nuis = 5, nsd.nuis = 2, log.link = TRUE, param.sd = NULL,
-  optim.method = "BFGS", bounds = c(-Inf, Inf))
+  offset = NULL, flip.sign = TRUE, prior.control, multiplier = 5,
+  ngrid = 50, nsd = 5, ngrid.nuis = 5, nsd.nuis = 2, log.link = TRUE,
+  param.sd = NULL, optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
 \item{Y}{the observations, which can be a matrix or SummarizedExperiment,
@@ -59,6 +59,11 @@ Note that this should be on the natural log scale for a log link GLM.}
 when MAP is negative, default is TRUE (threshold must then be positive)}
 
 \item{prior.control}{see Details}
+
+\item{multiplier}{a positive number, when the prior is adapted to the \code{mle}
+matrix provided, this parameter connects the scale of the estimated distribution
+of betas to the scale of the prior. the default value was chosen based on
+FSR and error analysis of simulated data}
 
 \item{ngrid}{the number of grid points for grid integration of intervals}
 

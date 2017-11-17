@@ -57,6 +57,10 @@
 #' @param flip.sign whether to flip the sign of threshold value
 #' when MAP is negative, default is TRUE (threshold must then be positive)
 #' @param prior.control see Details
+#' @param multiplier a positive number, when the prior is adapted to the \code{mle}
+#' matrix provided, this parameter connects the scale of the estimated distribution
+#' of betas to the scale of the prior. the default value was chosen based on
+#' FSR and error analysis of simulated data
 #' @param ngrid the number of grid points for grid integration of intervals
 #' @param nsd the number of SDs of the Laplace posterior approximation to set the
 #' left and right edges of the grid around the MAP
@@ -158,6 +162,7 @@ apeglm <- function(Y, x, log.lik,
                    weights=NULL, offset=NULL,
                    flip.sign=TRUE,
                    prior.control,
+                   multiplier=5,
                    ngrid=50, nsd=5,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
@@ -180,11 +185,12 @@ apeglm <- function(Y, x, log.lik,
     prior.control$no.shrink <- seq_len(ncol(x))
   }
 
+  stopifnot(multiplier > 0)
+  
   if (!is.null(mle)) {
     stopifnot(!is.null(coef))
     prior.control$no.shrink <- setdiff(seq_len(ncol(x)), coef)
     prior.control$prior.var <- priorVar(mle)
-    multiplier <- 2
     prior.scale <- multiplier * sqrt(prior.control$prior.var)
     prior.scale <- min(prior.scale, 1)
     prior.control$prior.scale <- prior.scale
