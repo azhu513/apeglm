@@ -58,10 +58,10 @@
 #' when MAP is negative, default is TRUE (threshold must then be positive)
 #' @param prior.control see Details
 #' @param ngrid the number of grid points for grid integration of intervals
-#' @param nse the number of Laplace standard errors to set the
+#' @param nsd the number of SDs of the Laplace posterior approximation to set the
 #' left and right edges of the grid around the MAP
 #' @param ngrid.nuis the number of grid points for nuisance parameters
-#' @param nse.nuis the number of Laplace standard errors to set the
+#' @param nsd.nuis the number of Laplace standard errors to set the
 #' left and right edges of the grid around the MAP of the nuisance parameters
 #' @param log.link whether the GLM has a log link (default = TRUE)
 #' @param param.sd (optional) potential uncertainty measure on the parameter \code{param}.
@@ -71,26 +71,26 @@
 #'  
 #' @return a list of matrices containing the following components:
 #' \itemize{
-#'   \item \code{map}: a matrix of MAP estimates, columns for coefficients and rows for features
-#'   \item \code{se}: a matrix of SE estimates, same shape as \code{map}
-#'   \item \code{prior.control}: a list with details on the prior
-#'   \item \code{fsr}: a vector of the false sign rate for \code{coef}
-#'   \item \code{interval}: a matrix of either HPD or credible interval for \code{coef}
-#'   \item \code{thresh}: a vector of the posterior probability that the estimated parameter 
+#'   \item \code{map}: matrix of MAP estimates, columns for coefficients and rows for features
+#'   \item \code{sd}: matrix of posterior SD, same shape as \code{map}
+#'   \item \code{prior.control}: list with details on the prior
+#'   \item \code{fsr}: vector of the false sign rate for \code{coef}
+#'   \item \code{interval}: matrix of either HPD or credible interval for \code{coef}
+#'   \item \code{thresh}: vector of the posterior probability that the estimated parameter 
 #' is smaller than the threshold value specified in \code{threshold}
 #' when MAP is positive (or greater than
 #' -1 * threshold value when MAP is negative and flip.sign is TRUE)
-#'   \item \code{diag}: a matrix of diagnostics
-#'   \item \code{contrast.map}: a vector of MAP corresponding to the \code{contrast}
+#'   \item \code{diag}: matrix of diagnostics
+#'   \item \code{contrast.map}: vector of MAP estimates corresponding to the \code{contrast}
 #' when \code{contrast} is given 
-#'   \item \code{contrast.se}: a vector of SE corresponding to the \code{contrast}
+#'   \item \code{contrast.sd}: vector of posterior SD corresponding to the \code{contrast}
 #' when \code{contrast} is given
-#'   \item \code{ranges}: a GRanges or GRangesList with the estimated coefficients,
+#'   \item \code{ranges}: GRanges or GRangesList with the estimated coefficients,
 #' if \code{Y} was a SummarizedExperiment.
 #' }
 #'
 #' Note that all parameters associated with coefficients,
-#' e.g. \code{map}, \code{se}, etc., are returned on the natural log scale for a log link GLM.
+#' e.g. \code{map}, \code{sd}, etc., are returned on the natural log scale for a log link GLM.
 #' 
 #' @importFrom SummarizedExperiment assay rowRanges
 #' @importFrom GenomicRanges mcols<-
@@ -158,8 +158,8 @@ apeglm <- function(Y, x, log.lik,
                    weights=NULL, offset=NULL,
                    flip.sign=TRUE,
                    prior.control,
-                   ngrid=50, nse=5,
-                   ngrid.nuis=5, nse.nuis=2,
+                   ngrid=50, nsd=5,
+                   ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
                    optim.method="BFGS",
@@ -243,7 +243,7 @@ apeglm <- function(Y, x, log.lik,
   result <- list()
   result$map <- matrix(nrow=nrows, ncol=nvars,
                          dimnames=list(rownames, xnames))
-  result$se <- matrix(nrow=nrows, ncol=nvars,
+  result$sd <- matrix(nrow=nrows, ncol=nvars,
                       dimnames=list(rownames, xnames))
   result$prior.control <- prior.control
   
@@ -280,7 +280,7 @@ apeglm <- function(Y, x, log.lik,
     contrast.nms <- list(rownames, colnames(contrasts))
     result$contrast.map <- matrix(nrow=nrows, ncol=ncontr,
                                   dimnames=contrast.nms)
-    result$contrast.se <- matrix(nrow=nrows, ncol=ncontr,
+    result$contrast.sd <- matrix(nrow=nrows, ncol=ncontr,
                                  dimnames=contrast.nms)
   }
     
@@ -299,15 +299,15 @@ apeglm <- function(Y, x, log.lik,
                                 weights=weights.row, offset=offset.row,
                                 flip.sign = flip.sign,
                                 prior.control=prior.control,
-                                ngrid=ngrid, nse=nse,
-                                ngrid.nuis=ngrid.nuis, nse.nuis=nse.nuis,
+                                ngrid=ngrid, nsd=nsd,
+                                ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
                                 log.link=log.link,
                                 param.sd=param.sd.i,
                                 intercept=intercept[i],
                                 optim.method=optim.method,
                                 bounds=bounds)
     result$map[i,] <- row.result$map
-    result$se[i,] <- row.result$se
+    result$sd[i,] <- row.result$sd
     if (!is.null(coef)) {
       result$fsr[i,] <- row.result$fsr
       result$interval[i,] <- row.result$ci
@@ -322,7 +322,7 @@ apeglm <- function(Y, x, log.lik,
     result$diag[i,] <- row.result$diag
     if (!missing(contrasts)) { 
       result$contrast.map[i,] <- row.result$contrast.map
-      result$contrast.se[i,] <- row.result$contrast.se
+      result$contrast.sd[i,] <- row.result$contrast.sd
     }
   }
 
@@ -375,8 +375,8 @@ apeglm.single <- function(y, x, log.lik,
                           weights, offset,
                           flip.sign,
                           prior.control,
-                          ngrid, nse,
-                          ngrid.nuis, nse.nuis,
+                          ngrid, nsd,
+                          ngrid.nuis, nsd.nuis,
                           log.link=TRUE,
                           param.sd,
                           intercept,
@@ -384,7 +384,7 @@ apeglm.single <- function(y, x, log.lik,
                           bounds) {
 
   if (log.link & all(y == 0)) {
-    out <- list(map=NA, se=NA)
+    out <- list(map=NA, sd=NA)
     if (!is.null(coef)) {
       out$diag <- if (interval.type != "laplace") {
         c(NA, NA, NA, NA)
@@ -401,7 +401,7 @@ apeglm.single <- function(y, x, log.lik,
     }
     if (!missing(contrasts)) {
       out$contrast.map <- NA
-      out$contrast.se <- NA
+      out$contrast.sd <- NA
     }
     return(out)
   }
@@ -415,7 +415,7 @@ apeglm.single <- function(y, x, log.lik,
     }
   }
 
-  # numerical optimization to find the MAP and SE
+  # numerical optimization to find the MAP and posterior SD
   if (optim.method != "L-BFGS-B") {
     bounds <- c(-Inf, Inf)
   }
@@ -429,23 +429,23 @@ apeglm.single <- function(y, x, log.lik,
   
   map <- o$par
   sigma <- -solve(o$hessian)
-  se <- sqrt(diag(sigma))
+  sd <- sqrt(diag(sigma))
 
-  out <- list(map=map, se=se)
+  out <- list(map=map, sd=sd)
 
   # calculate statistics for a particular coefficient
   if (!is.null(coef)) {
     if (interval.type == "laplace") {
       stopifnot(is.null(param.sd)) # not implemented
       qn <- qnorm((1 - interval.level)/2,lower.tail=FALSE)
-      out$ci <- c(map[coef] - qn * se[coef], map[coef] + qn * se[coef])
+      out$ci <- c(map[coef] - qn * sd[coef], map[coef] + qn * sd[coef])
       out$diag <- c(o$convergence, o$counts[1])
-      out$fsr <- pnorm(-abs(map[coef]),0,se[coef])
+      out$fsr <- pnorm(-abs(map[coef]),0,sd[coef])
       if (!is.null(threshold)) {
         if (flip.sign) {
-          out$threshold <- pnorm(sign(map[coef])*threshold, map[coef], se[coef])
+          out$threshold <- pnorm(sign(map[coef])*threshold, map[coef], sd[coef])
         } else {
-          out$threshold <- pnorm(threshold, map[coef], se[coef])
+          out$threshold <- pnorm(threshold, map[coef], sd[coef])
         }
       }
     } else {
@@ -459,12 +459,12 @@ apeglm.single <- function(y, x, log.lik,
                          weights=weights, offset=offset,
                          flip.sign=flip.sign,
                          prior.control=prior.control,
-                         ngrid=ngrid, nse=nse,
-                         ngrid.nuis=ngrid.nuis, nse.nuis=nse.nuis,
+                         ngrid=ngrid, nsd=nsd,
+                         ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
                          log.link=log.link,
                          param.sd=param.sd,
                          intercept=intercept,
-                         o=o, map=map, sigma=sigma, se=se, out=out)
+                         o=o, map=map, sigma=sigma, sd=sd, out=out)
     }
   } else {
     # just diagnostic values (if coef not specified)
@@ -477,7 +477,7 @@ apeglm.single <- function(y, x, log.lik,
     stopifnot(nrow(contrasts) == ncol(x))
     stopifnot(ncol(contrasts) >= 1)
     out$contrast.map <- map %*% contrasts
-    out$contrast.se <- t(sqrt(diag(t(contrasts) %*% sigma %*% contrasts)))
+    out$contrast.sd <- t(sqrt(diag(t(contrasts) %*% sigma %*% contrasts)))
   }
   
   out

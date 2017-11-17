@@ -279,7 +279,7 @@ theta.hat <- bbEstDisp(success=ase.cts, size=cts,
 ```
 
 ```{r}
-mle <- cbind(fit.mle$map[,coef], fit.mle$se[,coef])
+mle <- cbind(fit.mle$map[,coef], fit.mle$sd[,coef])
 param <- cbind(theta.hat, cts)
 system.time({
   fit2 <- apeglm(Y=ase.cts, x=x,

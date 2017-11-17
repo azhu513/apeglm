@@ -7,8 +7,8 @@
 apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   no.shrink = FALSE, interval.type = c("laplace", "HPD", "credible"),
   interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
-  offset = NULL, flip.sign = TRUE, prior.control, ngrid = 50, nse = 5,
-  ngrid.nuis = 5, nse.nuis = 2, log.link = TRUE, param.sd = NULL,
+  offset = NULL, flip.sign = TRUE, prior.control, ngrid = 50, nsd = 5,
+  ngrid.nuis = 5, nsd.nuis = 2, log.link = TRUE, param.sd = NULL,
   optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
@@ -62,12 +62,12 @@ when MAP is negative, default is TRUE (threshold must then be positive)}
 
 \item{ngrid}{the number of grid points for grid integration of intervals}
 
-\item{nse}{the number of Laplace standard errors to set the
+\item{nsd}{the number of SDs of the Laplace posterior approximation to set the
 left and right edges of the grid around the MAP}
 
 \item{ngrid.nuis}{the number of grid points for nuisance parameters}
 
-\item{nse.nuis}{the number of Laplace standard errors to set the
+\item{nsd.nuis}{the number of Laplace standard errors to set the
 left and right edges of the grid around the MAP of the nuisance parameters}
 
 \item{log.link}{whether the GLM has a log link (default = TRUE)}
@@ -82,26 +82,26 @@ this should only be a vector, used when \code{param} specifies a single paramete
 \value{
 a list of matrices containing the following components:
 \itemize{
-  \item \code{map}: a matrix of MAP estimates, columns for coefficients and rows for features
-  \item \code{se}: a matrix of SE estimates, same shape as \code{map}
-  \item \code{prior.control}: a list with details on the prior
-  \item \code{fsr}: a vector of the false sign rate for \code{coef}
-  \item \code{interval}: a matrix of either HPD or credible interval for \code{coef}
-  \item \code{thresh}: a vector of the posterior probability that the estimated parameter 
+  \item \code{map}: matrix of MAP estimates, columns for coefficients and rows for features
+  \item \code{sd}: matrix of posterior SD, same shape as \code{map}
+  \item \code{prior.control}: list with details on the prior
+  \item \code{fsr}: vector of the false sign rate for \code{coef}
+  \item \code{interval}: matrix of either HPD or credible interval for \code{coef}
+  \item \code{thresh}: vector of the posterior probability that the estimated parameter 
 is smaller than the threshold value specified in \code{threshold}
 when MAP is positive (or greater than
 -1 * threshold value when MAP is negative and flip.sign is TRUE)
-  \item \code{diag}: a matrix of diagnostics
-  \item \code{contrast.map}: a vector of MAP corresponding to the \code{contrast}
+  \item \code{diag}: matrix of diagnostics
+  \item \code{contrast.map}: vector of MAP estimates corresponding to the \code{contrast}
 when \code{contrast} is given 
-  \item \code{contrast.se}: a vector of SE corresponding to the \code{contrast}
+  \item \code{contrast.sd}: vector of posterior SD corresponding to the \code{contrast}
 when \code{contrast} is given
-  \item \code{ranges}: a GRanges or GRangesList with the estimated coefficients,
+  \item \code{ranges}: GRanges or GRangesList with the estimated coefficients,
 if \code{Y} was a SummarizedExperiment.
 }
 
 Note that all parameters associated with coefficients,
-e.g. \code{map}, \code{se}, etc., are returned on the natural log scale for a log link GLM.
+e.g. \code{map}, \code{sd}, etc., are returned on the natural log scale for a log link GLM.
 }
 \description{
 apeglm provides Bayesian shrinkage estimators for effect sizes

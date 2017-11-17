@@ -7,28 +7,28 @@ gridResults <- function(y, x, log.lik,
                         weights, offset,
                         flip.sign,
                         prior.control,
-                        ngrid, nse,
-                        ngrid.nuis, nse.nuis,
+                        ngrid, nsd,
+                        ngrid.nuis, nsd.nuis,
                         log.link,
                         param.sd,
                         intercept,
-                        o, map, sigma, se, out) {
+                        o, map, sigma, sd, out) {
 
-  corr.sigma <- sigma / outer(se, se)
+  corr.sigma <- sigma / outer(sd, sd)
   
   # evaluate the unnormalized posterior for 'coef' over a grid 
-  beta.min <- map[coef] - nse*se[coef]
-  beta.max <- map[coef] + nse*se[coef]
+  beta.min <- map[coef] - nsd*sd[coef]
+  beta.max <- map[coef] + nsd*sd[coef]
   stopifnot(ngrid %% 2 == 0)
   betas <- seq(beta.min, beta.max, length.out=(ngrid + 1))
 
   # we integrate the unnormalized posterior over the other coefficients than 'coef'
-  unpo <- integrateOther(corr.sigma=corr.sigma, coef=coef, betas=betas, map=map, se=se,
+  unpo <- integrateOther(corr.sigma=corr.sigma, coef=coef, betas=betas, map=map, sd=sd,
                          log.lik = log.lik, log.prior = log.prior, 
                          y = y, x = x, param = param, param.sd = param.sd,
                          prior.control = prior.control, 
                          weights = weights, offset = offset,
-                         ngrid.nuis = ngrid.nuis, nse.nuis = nse.nuis)
+                         ngrid.nuis = ngrid.nuis, nsd.nuis = nsd.nuis)
 
   # check that unpo is monotonic on either side of map
   if (!all(diff(unpo[betas < map[coef]]) >= 0) 
@@ -296,12 +296,12 @@ solve.x <- function(y, x, remn.area) {
 }
 
 
-integrateOther <- function(corr.sigma, coef, betas, map, se,
+integrateOther <- function(corr.sigma, coef, betas, map, sd,
                            log.lik, log.prior, 
                            y, x, param, param.sd,
                            prior.control, 
                            weights, offset,
-                           ngrid.nuis, nse.nuis) {
+                           ngrid.nuis, nsd.nuis) {
 
   # skip the integration over other coefs if ngrid.nuis == 1
   if (ngrid.nuis == 1) {
@@ -319,7 +319,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
   }
   
   nnuis <- length(map) - 1
-  nuis.grid.vec <- seq(-nse.nuis, nse.nuis, length.out=ngrid.nuis)
+  nuis.grid.vec <- seq(-nsd.nuis, nsd.nuis, length.out=ngrid.nuis)
   nuis.grid <- as.matrix(expand.grid(lapply(seq_len(nnuis), function(i) nuis.grid.vec)))
 
   nuis.grid.big <- matrix(0, nrow=nrow(nuis.grid), ncol=length(map))
@@ -343,7 +343,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
                                 LUM = log.unpo.mat,
                                 betas = betas,
                                 NGB = nuis.grid.big,
-                                map = map, se = se, coef = coef,
+                                map = map, sd = sd, coef = coef,
                                 log.lik = log.lik, log.prior = log.prior,
                                 y = y, x = x, param = param,
                                 prior.control = prior.control,
@@ -355,7 +355,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
     # also include 'param' in the nuisance grid for integration
     # use a narrower grid than for the coefficients by 1/2 x
     npg <- ngrid.nuis
-    param.grid <- seq(-nse.nuis/2,nse.nuis/2,length.out=npg)
+    param.grid <- seq(-nsd.nuis/2,nsd.nuis/2,length.out=npg)
     norm.po.mat <- matrix(nrow=npg, ncol=length(betas))
     for (j in seq_len(npg)) {
       param.star <- param + param.sd * param.grid[j]
@@ -364,7 +364,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
                                   LUM = log.unpo.mat,
                                   betas = betas,
                                   NGB = nuis.grid.big,
-                                  map = map, se = se, coef = coef,
+                                  map = map, sd = sd, coef = coef,
                                   log.lik = log.lik, log.prior = log.prior,
                                   y = y, x = x, param = param.star,
                                   prior.control = prior.control,
@@ -389,12 +389,12 @@ integrateOther <- function(corr.sigma, coef, betas, map, se,
 # LUM = log un-normalized posterior matrix
 # NGB = nuisance grid, big
 fillLogUnpo <- function(ng, LUM, betas, NGB, 
-                        map, se, coef, log.lik, log.prior, 
+                        map, sd, coef, log.lik, log.prior, 
                         y, x, param , prior.control, 
                         weights, offset){
   for (i in seq_len(ng)) {
     LUM[i,] <- sapply(betas, function(b) {
-      beta.vec <- map + NGB[i, ] * se
+      beta.vec <- map + NGB[i, ] * sd
       beta.vec[coef] <- b
       log.post(beta.vec, log.lik = log.lik, log.prior = log.prior, 
                y = y, x = x, param = param, 

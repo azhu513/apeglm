@@ -40,7 +40,7 @@ test_that("example on beta-binomial", {
                          x=x, beta=fit.mle$map,
                          minDisp=1, maxDisp=500)
   coef <- 2
-  mle <- cbind(fit.mle$map[,coef], fit.mle$se[,coef])
+  mle <- cbind(fit.mle$map[,coef], fit.mle$sd[,coef])
   param <- cbind(theta.hat, Y)
   fit2 <- apeglm(Y=ase.cts, x=x,
                  log.lik=betabinom.log.lik,
