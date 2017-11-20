@@ -1,4 +1,4 @@
-priorVar <- function(mle, min.var=.01^2, max.var=20^2) {
+priorVar <- function(mle, min.var=.001^2, max.var=20^2) {
   # here estimate the variance of a Normal in a hierarchical model
   # from MLE estimates and their SE (so the non-equal variance hierarchical model)
   # here using notation and estimator from Efron and Morris:
