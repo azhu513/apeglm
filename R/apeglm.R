@@ -162,7 +162,7 @@ apeglm <- function(Y, x, log.lik,
                    weights=NULL, offset=NULL,
                    flip.sign=TRUE,
                    prior.control,
-                   multiplier=5,
+                   multiplier=1,
                    ngrid=50, nse=5,
                    ngrid.nuis=5, nse.nuis=2,
                    log.link=TRUE,
@@ -349,9 +349,9 @@ apeglm <- function(Y, x, log.lik,
 log.prior <- function(beta, prior.control) {
   p <- prior.control
   log.prior.no.shrink <- sum(dnorm(beta[p$no.shrink], mean = p$prior.no.shrink.mean, 
-                            sd = p$prior.no.shrink.scale, log=TRUE))
-  log.prior.shrink <- sum(1/p$prior.scale * dt(beta[-p$no.shrink]/p$prior.scale,
-                          df = p$prior.df, ncp = p$prior.mean, log=TRUE))
+                                   sd = p$prior.no.shrink.scale, log=TRUE))
+  log.prior.shrink <- sum(dt(beta[-p$no.shrink]/p$prior.scale,
+                             df = p$prior.df, ncp = p$prior.mean, log=TRUE))
   log.prior.no.shrink + log.prior.shrink
 }
 

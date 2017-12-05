@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.0.2
+-------------------------
+
+    o A bug in the calculation of the prior is fixed. This was
+      identified by Cecile Le Sueur.
+
 CHANGES IN VERSION 1.0.1
 -------------------------
 
