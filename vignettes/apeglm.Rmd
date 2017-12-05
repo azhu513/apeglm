@@ -306,6 +306,15 @@ points(res$baseMean[idx], fit2$map[idx,coef], col="dodgerblue", cex=3)
 log(.75/(1-.75))
 ```
 
+# Acknowledgments
+
+We have benefited in the development of `apeglm` from feedback or
+contributions from the following individuals:
+
+Wolfgang Huber,
+Cecile Le Sueur,
+Charlotte Soneson
+
 # Session Info
 
 ```{r}
