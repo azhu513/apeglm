@@ -278,6 +278,11 @@ theta.hat <- bbEstDisp(success=ase.cts, size=cts,
                        minDisp=1, maxDisp=500)
 ```
 
+**Note:** here we use the `se` slot of the returned fit object,
+although in future versions of *apeglm*, this slot is named `sd`
+(posterior standard deviation is a more accurate description of this
+quantity).
+
 ```{r}
 mle <- cbind(fit.mle$map[,coef], fit.mle$se[,coef])
 param <- cbind(theta.hat, cts)

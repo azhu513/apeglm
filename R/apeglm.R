@@ -77,6 +77,7 @@
 #' \itemize{
 #'   \item \code{map}: a matrix of MAP estimates, columns for coefficients and rows for features
 #'   \item \code{se}: a matrix of SE estimates, same shape as \code{map}
+#' (note: in future versions of apeglm, this slot is renamed \code{sd}).
 #'   \item \code{prior.control}: a list with details on the prior
 #'   \item \code{fsr}: a vector of the false sign rate for \code{coef}
 #'   \item \code{interval}: a matrix of either HPD or credible interval for \code{coef}

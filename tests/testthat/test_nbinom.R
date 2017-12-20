@@ -1,5 +1,6 @@
 context("nbinom")
 test_that("nbinom cases works", {
+
   n.per.group <- 5
   n <- n.per.group * 2
   m <- 100
@@ -21,7 +22,7 @@ test_that("nbinom cases works", {
                 offset = offset,
                 param = param,
                 coef = 2)
-  plot(beta.cond, fit$map[,2])
+  #plot(beta.cond, fit$map[,2])
   
   # other interval types:
   fit <- apeglm(Y = Y, x = x,
