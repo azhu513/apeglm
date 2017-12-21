@@ -391,25 +391,7 @@ apeglm.single <- function(y, x, log.lik,
                           bounds) {
 
   if (log.link & all(y == 0)) {
-    out <- list(map=NA, sd=NA)
-    if (!is.null(coef)) {
-      out$diag <- if (interval.type != "laplace") {
-        c(NA, NA, NA, NA)
-      } else {
-        c(NA, NA)
-      }
-      out$fsr <- NA
-      out$ci <- c(NA, NA)
-      if (!is.null(threshold)) {
-        out$threshold <- NA
-      }
-    } else {
-      out$diag <- c(NA, NA)
-    }
-    if (!missing(contrasts)) {
-      out$contrast.map <- NA
-      out$contrast.sd <- NA
-    }
+    out <- buildNAOut(coef, interval.type, threshold, contrasts)
     return(out)
   }
     
@@ -426,6 +408,7 @@ apeglm.single <- function(y, x, log.lik,
   if (optim.method != "L-BFGS-B") {
     bounds <- c(-Inf, Inf)
   }
+
   o <- optim(par = init, fn = log.post, log.lik = log.lik, log.prior = log.prior, 
              y = y, x = x, param = param,
              weights = weights, offset = offset, 
@@ -436,10 +419,16 @@ apeglm.single <- function(y, x, log.lik,
   
   map <- o$par
   sigma <- -solve(o$hessian)
+
+  if (any(diag(sigma) <= 0)) {
+    out <- buildNAOut(coef, interval.type, threshold, contrasts)
+    out$map <- map
+    return(out)
+  }
+
   sd <- sqrt(diag(sigma))
 
   out <- list(map=map, sd=sd)
-
   # calculate statistics for a particular coefficient
   if (!is.null(coef)) {
     if (interval.type == "laplace") {
@@ -490,3 +479,25 @@ apeglm.single <- function(y, x, log.lik,
   out
 }
 
+buildNAOut <- function(coef, interval.type, threshold, contrasts) {
+  out <- list(map=NA, sd=NA)
+  if (!is.null(coef)) {
+    out$diag <- if (interval.type != "laplace") {
+                  c(NA, NA, NA, NA)
+                } else {
+                  c(NA, NA)
+                }
+    out$fsr <- NA
+    out$ci <- c(NA, NA)
+    if (!is.null(threshold)) {
+      out$threshold <- NA
+    }
+  } else {
+    out$diag <- c(NA, NA)
+  }
+  if (!missing(contrasts)) {
+    out$contrast.map <- NA
+    out$contrast.sd <- NA
+  }
+  out
+}
