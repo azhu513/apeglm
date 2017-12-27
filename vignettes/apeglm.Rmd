@@ -241,7 +241,7 @@ ase.cts[idx,idx2] <- matrix(rbetabinom(length(idx)*length(idx2), prob=.75,
 ```
 
 We define a beta-binomial likelihood function which uses the total counts
-as a parameter:
+as a parameter, and the logit function as a link:
 
 ```{r}
 betabinom.log.lik <- function(y, x, beta, param, offset) {
@@ -268,7 +268,7 @@ system.time({
 
 ```{r mlemaplot}
 coef <- 2
-plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="LFC")
+plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="log odds")
 points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
 ```
 
@@ -294,10 +294,10 @@ system.time({
 ```{r asemaplot, fig.width=8, fig.height=4}
 par(mfrow=c(1,2))
 ylim <- c(-3,3)
-plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="LFC", ylim=ylim)
+plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="log odds", ylim=ylim)
 points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
 cols <- ifelse(fit2$svalue < .001, "red", "black")
-plot(res$baseMean, fit2$map[,coef], log="x", xlab=xlab, ylab="LFC",
+plot(res$baseMean, fit2$map[,coef], log="x", xlab=xlab, ylab="log odds",
      col=cols, ylim=ylim)
 points(res$baseMean[idx], fit2$map[idx,coef], col="dodgerblue", cex=3)
 ```
