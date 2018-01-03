@@ -190,18 +190,20 @@ plot(res$padj, fit$svalue, col="blue",
 ```
 
 More scrutiny can be applied by using an LFC threshold greater
-than zero, and asking for the probability of a false sign
-or that the effect size is not further from zero in
-distance than the threshold amount.
-
-As we already specfified a threshold of 1 on the log2 scale,
-we can see how this changes the local FSRs:
+than zero, and asking for the probability of a "false-sign-or-small" event:
+that the effect size is not further from zero in distance than
+the threshold amount. We can run the `svalue` function on these
+per-gene probabilities to produce a *fsos*-value.
+By specifying `threshold=log(2) * 1` above, `apeglm` will then output
+a vector `thresh` in the results list that gives the per-gene
+probabilities of false-sign-or-small events.
 
 ```{r maplotthresh}
-cols <- ifelse(svalue(fit$thresh) < .01, "red", "black")
+fsos.val <- svalue(fit$thresh)
+cols <- ifelse(fsos.val < .01, "red", "black")
 plot(res$baseMean, log2(exp(1)) * fit$map[,5], log="x", col=cols,
      xlab=xlab, ylab="LFC")
-abline(h=c(-1,0,1), col=rgb(0,0,1,.5), lwd=2)
+abline(h=c(-1,0,1), col=rgb(1,0,0,.5), lwd=2)
 ```
 
 # Modeling ratios of counts 
@@ -295,18 +297,19 @@ system.time({
 ```
 
 In the `apeglm` plot, we color in red the genes with a low aggregate
-probability of being small-or-false-sign (*sofs*-value < .01), where
-we've defined "small" using the `threshold` argument above.
+probability of false-sign-or-small events (*fsos*-value < .01), where
+we've again defined "small" on the log odds scale using the
+`threshold` argument above.
 
 ```{r asemaplot, fig.width=8, fig.height=4}
 par(mfrow=c(1,2))
 ylim <- c(-1,1.5)
-sofsval <- svalue(fit2$thresh) # small-or-false-sign value
+fofs.val <- svalue(fit2$thresh) # small-or-false-sign value
 plot(res$baseMean, fit.mle$map[,coef], main="MLE",
      log="x", xlab=xlab, ylab="log odds", ylim=ylim)
 points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
 abline(h=0,col=rgb(1,0,0,.5))
-cols <- ifelse(sofsval < .01, "red", "black")
+cols <- ifelse(fofs.val < .01, "red", "black")
 plot(res$baseMean, fit2$map[,coef], main="apeglm",
      log="x", xlab=xlab, ylab="log odds", col=cols, ylim=ylim)
 points(res$baseMean[idx], fit2$map[idx,coef], col="dodgerblue", cex=3)
