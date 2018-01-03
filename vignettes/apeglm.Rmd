@@ -1,20 +1,17 @@
 ---
 title: "Effect size estimation with apeglm"
-author: 
-- name: Anqi Zhu
-  affiliation: Department of Biostatistics, UNC-Chapel Hill
-- name: Joseph G. Ibrahim
-  affiliation: Department of Biostatistics, UNC-Chapel Hill
-- name: Michael I. Love
-  affiliation: Department of Biostatistics, UNC-Chapel Hill
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+author: "Anqi Zhu, Joseph G. Ibrahim, and Michael I. Love"
 output:
-  BiocStyle::html_document:
+  rmarkdown::html_document:
+    highlight: pygments
+    toc: true
     toc_float: true
-package: apeglm
 abstract: |
-  *apeglm* provides Bayesian shrinkage estimators for effect sizes for a
-  variety of GLM models; *apeglm* stands for "approximate posterior
-  estimation for GLM".
+  *apeglm* provides empirical Bayes shrinkage estimators for effect sizes for a
+  variety of GLM models; *apeglm* stands for "Approximate Posterior
+  Estimation for GLM".
+  apeglm package version: `r packageVersion("apeglm")`
 vignette: |
   %\VignetteIndexEntry{Effect size estimation with apeglm}
   %\VignetteEngine{knitr::rmarkdown}
@@ -36,7 +33,8 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
 with the following code (not run here). See the DESeq2 vignette for
 more details. The `lfcShrink` wrapper function takes care of many
 details below, and unifies the interface for multiple shrinkage
-estimators. 
+estimators. The coefficient to shrink can be specified either by name
+or by number (following the order in `resultsNames(dds)`).
 
 ```{r,eval=FALSE}
 res <- lfcShrink(dds, coef=2, type="apeglm")
@@ -215,28 +213,32 @@ binomial model and test for the allelic balance across groups
 of samples.
 
 Here we will *simulate* allele counts from our existing dataset
-for demonstration. We spike in 10 genes with allelic imbalance.
+for demonstration. We spike in 10 genes with strong allelic imbalance
+(instead of an allelic ratio close to 0.5, these will have a ratio of
+0.75). 
 
 ```{r}
 library(emdbook)
 n <- 20
 f <- factor(rep(1:2,each=n))
-mu <- ifelse(res$baseMean > 10, res$baseMean, 10)
+mu <- ifelse(res$baseMean > 50, res$baseMean, 50)
 set.seed(1)
 cts <- matrix(rnbinom(nrow(dds)*2*n, 
                       mu=mu,
                       size=1/dispersions(dds)),
               ncol=2*n)
-theta <- runif(nrow(cts),1,100)
-prob <- rnorm(nrow(cts),.5,.01)
+theta <- runif(nrow(cts),1,1000)
+prob <- rnorm(nrow(cts),.5,.05) # close to 0.5
 ase.cts <- matrix(rbetabinom(prod(dim(cts)), prob=prob,
                              size=cts, theta=rep(theta,ncol(cts))),
                   nrow=nrow(cts))
 idx <- 1:10
 idx2 <- which(f == 2)
-theta[idx] <- 100
-ase.cts[idx,idx2] <- matrix(rbetabinom(length(idx)*length(idx2), prob=.75,
-                                       size=cts[idx,idx2], theta=100),
+theta[idx] <- 1000
+prob[idx] <- 0.75
+# the spiked in genes have an allelic ratio of 0.75
+ase.cts[idx,idx2] <- matrix(rbetabinom(length(idx)*length(idx2), prob=prob[idx],
+                                       size=cts[idx,idx2], theta=theta[idx]),
                             nrow=length(idx))
 ```
 
@@ -287,23 +289,34 @@ system.time({
                  param=param,
                  coef=coef,
                  mle=mle,
+                 threshold=0.5,
                  log.link=FALSE)
 })
 ```
 
+In the `apeglm` plot, we color in red the genes with a low aggregate
+probability of being small-or-false-sign (*sofs*-value < .01), where
+we've defined "small" using the `threshold` argument above.
+
 ```{r asemaplot, fig.width=8, fig.height=4}
 par(mfrow=c(1,2))
-ylim <- c(-3,3)
-plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="log odds", ylim=ylim)
+ylim <- c(-1,1.5)
+sofsval <- svalue(fit2$thresh) # small-or-false-sign value
+plot(res$baseMean, fit.mle$map[,coef], main="MLE",
+     log="x", xlab=xlab, ylab="log odds", ylim=ylim)
 points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
-cols <- ifelse(fit2$svalue < .001, "red", "black")
-plot(res$baseMean, fit2$map[,coef], log="x", xlab=xlab, ylab="log odds",
-     col=cols, ylim=ylim)
+abline(h=0,col=rgb(1,0,0,.5))
+cols <- ifelse(sofsval < .01, "red", "black")
+plot(res$baseMean, fit2$map[,coef], main="apeglm",
+     log="x", xlab=xlab, ylab="log odds", col=cols, ylim=ylim)
 points(res$baseMean[idx], fit2$map[idx,coef], col="dodgerblue", cex=3)
+abline(h=0,col=rgb(1,0,0,.5))
 ```
 
 ```{r}
-log(.75/(1-.75))
+logit <- function(x) log(x/(1-x))
+logit(.75)
+table(abs(logit(prob[sofsval < .01])) > .5)
 ```
 
 # Acknowledgments
