@@ -116,7 +116,8 @@ str(fit$prior.control)
 ```
 
 ```{r echo=FALSE, eval=FALSE}
-# this is 5x faster but has issues with MAP and Hessian right now
+# we are working on faster implementations of apeglm
+# this version is 3-4x faster but has issues with MAP and Hessian right now
 system.time({
   fit.fast <- apeglm(Y=airway, x=x,
                      log.lik=NULL,
@@ -128,6 +129,8 @@ system.time({
                      method="negbinR")
 })
 plot(fit$map[,5], fit.fast$map[,5])
+sum(is.na(fit$sd[,1]))
+sum(is.na(fit.fast$sd[,1]))
 ```
 
 Among other output, we have the estimated coefficients attached to the
