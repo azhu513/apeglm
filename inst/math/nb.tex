@@ -1,0 +1,36 @@
+\documentclass{article}
+\begin{document}
+The component of the Negative Binomial density we need for optimizing
+$\beta$, with counts $y$, mean $\mu$, and size $s$:
+
+\[ \left( \frac{\mu}{s+\mu} \right)^y \left( \frac{s}{s+\mu} \right)^s \]
+
+After taking the logarithm and removing terms:
+
+\[ y \log(\mu) - (y + s) \log(s + \mu) \]
+
+Then filling in $\mu = \exp(\beta^T x_i)$, and adding an index to $y$:
+
+\[ y_i \beta^T x_i - (y_i + s) \log(s + \exp(\beta^T x_i)) \]
+
+Differentiating this with respect to $\beta$:
+
+\[ y_i x_i - (y_i + s) \left( \frac{x_i \exp(\beta^T x_i)}{s +
+  \exp(\beta^T x_i)} \right) \]
+
+Let $a = (y_i + s)$ and $b = s + \exp(\beta^T x_i)$, then bringing out $x_i$:
+
+\[ x_i \left( y_i - \frac{a}{b} \exp(\beta^T x_i) \right) \]
+
+For adding the Normal and Cauchy prior (t with 1 degree of freedom),
+we just need the log of unnormalized densities, where $\sigma$ is the
+scale of the Normal and $S$ is the scale of the t:
+
+\[ -\frac{\beta_N^2}{2 \sigma^2}, \quad \textrm{and} \quad  -\log(1 + \beta_t^2/S^2) \]
+
+Differentiating with respect to $\beta$:
+
+\[ -\frac{\beta_N}{\sigma^2}, \quad \textrm{and} \quad  \frac{-2
+  \beta_t}{S^2 + \beta_t^2} \]
+
+\end{document}
