@@ -532,19 +532,19 @@ optimNegBin <- function(init, y, x, param, weights, offset, prior.control,
   sigma <- prior.control$prior.no.shrink.scale
   S <- prior.control$prior.scale
   # note we work with the negative log posterior
-  f <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
+  fn <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
     xbeta <- x %*% beta
     prior <- sum(-beta[no.shrink]^2/(2*sigma^2)) + sum(-log(1 + beta[shrink]^2/S^2))
     -sum(y * xbeta - (y + size) * log(size + exp(xbeta + offset))) - prior + const
   }
-  const <- -f(init, x, y, size, sigma, S, no.shrink, shrink, 0) - 1
+  const <- -fn(init, x, y, size, sigma, S, no.shrink, shrink, 0) - 1
   gr <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
     xbeta <- x %*% beta
     exbetaoff <- exp(xbeta + offset)
     prior <- sum(-beta[no.shrink]/sigma^2) + sum(-2*beta[shrink]/(S^2 + beta[shrink]^2))
     -t(x) %*% (y - (y + size) * exbetaoff / (size + exbetaoff)) - prior
   }
-  o <- optim(init, f, gr=gr, x=x, y=y, size=size,
+  o <- optim(par=init, fn=fn, gr=gr, x=x, y=y, size=size,
              sigma=sigma, S=S, no.shrink=no.shrink,
              shrink=shrink, const=const,
              lower=bounds[1], upper=bounds[2],

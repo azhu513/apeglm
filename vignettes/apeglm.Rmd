@@ -119,13 +119,13 @@ str(fit$prior.control)
 # we are working on faster implementations of apeglm
 # this version is 3-4x faster but has issues with MAP and Hessian right now
 system.time({
-  fit.fast <- apeglm(Y=airway, x=x,
+  fit.fast <- apeglm(Y=assay(airway)[5:10,], x=x,
                      log.lik=NULL,
-                     param=param,
+                     param=param[5:10],
                      coef=ncol(x),
                      threshold=log(2) * 1,
                      mle=mle,
-                     offset=offset,
+                     offset=offset[5:10,],
                      method="negbinR")
 })
 plot(fit$map[,5], fit.fast$map[,5])
