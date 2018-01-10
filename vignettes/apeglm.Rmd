@@ -115,6 +115,21 @@ system.time({
 str(fit$prior.control)
 ```
 
+```{r echo=FALSE, eval=FALSE}
+# this is 5x faster but has issues with MAP and Hessian right now
+system.time({
+  fit.fast <- apeglm(Y=airway, x=x,
+                     log.lik=NULL,
+                     param=param,
+                     coef=ncol(x),
+                     threshold=log(2) * 1,
+                     mle=mle,
+                     offset=offset,
+                     method="negbinR")
+})
+plot(fit$map[,5], fit.fast$map[,5])
+```
+
 Among other output, we have the estimated coefficients attached to the
 ranges of the *SummarizedExperiment* used as input:
 

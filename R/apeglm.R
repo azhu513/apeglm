@@ -70,6 +70,13 @@
 #' @param log.link whether the GLM has a log link (default = TRUE)
 #' @param param.sd (optional) potential uncertainty measure on the parameter \code{param}.
 #' this should only be a vector, used when \code{param} specifies a single parameter
+#' @param method options for how apeglm will find the posterior mode and SD.
+#' The default is "general" which allows the user to specify a likelihood
+#' in a general way. Alternatives for faster performance with the Negative Binomial
+#' likelihood are "negbinR" and "negbinC", which should provide increasing
+#' benefits respectively in terms of speed. These second two options will
+#' ignore any function provided to the \code{log.lik} argument, and \code{param}
+#' should specify the dispersion parameter (such that Var = mu + param mu^2).
 #' @param optim.method the method passed to \code{optim}
 #' @param bounds the bounds for the numeric optimization 
 #'  
@@ -156,7 +163,7 @@ apeglm <- function(Y, x, log.lik,
                    coef=NULL,
                    mle=NULL,
                    no.shrink=FALSE,
-                   interval.type=c('laplace', 'HPD', 'credible'),
+                   interval.type=c("laplace", "HPD", "credible"),
                    interval.level=0.95,
                    threshold=NULL, contrasts,
                    weights=NULL, offset=NULL,
@@ -167,6 +174,7 @@ apeglm <- function(Y, x, log.lik,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
+                   method=c("general","negbinR","negbinC"),
                    optim.method="BFGS",
                    bounds=c(-Inf,Inf)) {
 
@@ -198,6 +206,7 @@ apeglm <- function(Y, x, log.lik,
 
   stopifnot(ncol(Y) == nrow(x))
   interval.type <- match.arg(interval.type)
+  method <- match.arg(method)
   
   if (!is.matrix(param)) param <- as.matrix(param, ncol=1)
   # don't have code yet for use of threshold with param.sd
@@ -232,10 +241,12 @@ apeglm <- function(Y, x, log.lik,
     stopifnot(nrow(offset)==nrow(Y))
   }
 
-  offset.in.log.lik <- any(grepl("offset",as.character(body(log.lik))))
-  if (offset.in.log.lik) {
-    if (is.null(offset)) {
-      stop("log.lik uses 'offset', so 'offset' should be non-NULL")
+  if (method == "general") {
+    offset.in.log.lik <- any(grepl("offset",as.character(body(log.lik))))
+    if (offset.in.log.lik) {
+      if (is.null(offset)) {
+        stop("log.lik uses 'offset', so 'offset' should be non-NULL")
+      }
     }
   }
   
@@ -310,6 +321,7 @@ apeglm <- function(Y, x, log.lik,
                                 log.link=log.link,
                                 param.sd=param.sd.i,
                                 intercept=intercept[i],
+                                method=method,
                                 optim.method=optim.method,
                                 bounds=bounds)
     result$map[i,] <- row.result$map
@@ -387,6 +399,7 @@ apeglm.single <- function(y, x, log.lik,
                           log.link=TRUE,
                           param.sd,
                           intercept,
+                          method,
                           optim.method,
                           bounds) {
 
@@ -409,13 +422,21 @@ apeglm.single <- function(y, x, log.lik,
     bounds <- c(-Inf, Inf)
   }
 
-  o <- optim(par = init, fn = log.post, log.lik = log.lik, log.prior = log.prior, 
-             y = y, x = x, param = param,
-             weights = weights, offset = offset, 
-             prior.control = prior.control, 
-             control=list(fnscale=-1),
-             lower=bounds[1], upper=bounds[2],
-             hessian=TRUE, method=optim.method)
+  if (method == "general") {
+    o <- optim(par = init, fn = log.post, log.lik = log.lik, log.prior = log.prior, 
+               y = y, x = x, param = param,
+               weights = weights, offset = offset, 
+               prior.control = prior.control, 
+               control=list(fnscale=-1),
+               lower=bounds[1], upper=bounds[2],
+               hessian=TRUE, method=optim.method)
+  } else if (method == "negbinR") {
+    o <- optimNegBin(init=init, y=y, x=x, param=param,
+                     weights=weights, offset=offset,
+                     prior.control=prior.control,
+                     bounds=bounds,
+                     optim.method=optim.method)
+  }
   
   map <- o$par
   sigma <- -solve(o$hessian)
@@ -500,4 +521,30 @@ buildNAOut <- function(coef, interval.type, threshold, contrasts) {
     out$contrast.sd <- NA
   }
   out
+}
+
+optimNegBin <- function(init, y, x, param, weights, offset, prior.control,
+                        bounds, optim.method) {
+  # TODO: weights and offset are being ignored
+  size <- 1/param
+  no.shrink <- prior.control$no.shrink
+  shrink <- setdiff(seq_along(init), no.shrink)
+  sigma <- prior.control$prior.no.shrink.scale
+  S <- prior.control$prior.scale
+  f <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
+    xbeta <- x %*% beta
+    prior <- sum(-beta[no.shrink]^2/(2*sigma^2) - log(1 + beta[shrink]^2/S^2))
+    -sum(y * xbeta - (y + size) * log(size + exp(xbeta))) - prior + const
+  }
+  const <- -f(init, x, y, size, sigma, S, no.shrink, shrink, 0) - 1
+  gr <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
+    xbeta <- x %*% beta
+    prior <- sum(-beta[no.shrink]/sigma^2 - 2*beta[shrink]/(S^2 + beta[shrink]^2))
+    -t(x) %*% (y - (y + size) * exp(xbeta) / (size + exp(xbeta)))
+  }
+  optim(init, f, gr=gr, x=x, y=y, size=size,
+        sigma=sigma, S=S, no.shrink=no.shrink,
+        shrink=shrink, const=const,
+        lower=bounds[1], upper=bounds[2],
+        hessian=TRUE, method=optim.method)
 }
