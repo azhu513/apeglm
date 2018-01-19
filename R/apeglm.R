@@ -561,3 +561,4 @@ optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
   o$hessian <- -1 * o$hessian
   o
 }
+
