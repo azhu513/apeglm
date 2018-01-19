@@ -73,7 +73,7 @@
 #' @param method options for how apeglm will find the posterior mode and SD.
 #' The default is "general" which allows the user to specify a likelihood
 #' in a general way. Alternatives for faster performance with the Negative Binomial
-#' likelihood are "negbinR" and "negbinC", which should provide increasing
+#' likelihood are "nbinomR" and "nbinomC", which should provide increasing
 #' benefits respectively in terms of speed. These second two options will
 #' ignore any function provided to the \code{log.lik} argument, and \code{param}
 #' should specify the dispersion parameter (such that Var = mu + param mu^2).
@@ -174,7 +174,7 @@ apeglm <- function(Y, x, log.lik,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
-                   method=c("general","negbinR","negbinC"),
+                   method=c("general","nbinomR","nbinomC"),
                    optim.method="BFGS",
                    bounds=c(-Inf,Inf)) {
 
@@ -430,8 +430,8 @@ apeglm.single <- function(y, x, log.lik,
                control=list(fnscale=-1),
                lower=bounds[1], upper=bounds[2],
                hessian=TRUE, method=optim.method)
-  } else if (method == "negbinR") {
-    o <- optimNegBin(init=init, y=y, x=x, param=param,
+  } else if (method == "nbinomR") {
+    o <- optimNbinom(init=init, y=y, x=x, param=param,
                      weights=weights, offset=offset,
                      prior.control=prior.control,
                      bounds=bounds,
@@ -523,7 +523,7 @@ buildNAOut <- function(coef, interval.type, threshold, contrasts) {
   out
 }
 
-optimNegBin <- function(init, y, x, param, weights, offset, prior.control,
+optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
                         bounds, optim.method) {
   # TODO: weights are being ignored right now
   size <- 1/param
@@ -541,10 +541,13 @@ optimNegBin <- function(init, y, x, param, weights, offset, prior.control,
   gr <- function(beta, x, y, size, sigma, S, no.shrink, shrink, const) {
     xbeta <- x %*% beta
     exbetaoff <- exp(xbeta + offset)
-    prior <- sum(-beta[no.shrink]/sigma^2) + sum(-2*beta[shrink]/(S^2 + beta[shrink]^2))
+    prior <- numeric(length(beta))
+    prior[no.shrink] <- -beta[no.shrink]/sigma^2
+    prior[shrink] <- -2*beta[shrink]/(S^2 + beta[shrink]^2)
     -t(x) %*% (y - (y + size) * exbetaoff / (size + exbetaoff)) - prior
   }
-  o <- optim(par=init, fn=fn, gr=gr, x=x, y=y, size=size,
+  o <- optim(par=init, fn=fn, gr=gr,
+             x=x, y=y, size=size,
              sigma=sigma, S=S, no.shrink=no.shrink,
              shrink=shrink, const=const,
              lower=bounds[1], upper=bounds[2],

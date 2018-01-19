@@ -24,7 +24,7 @@ test_that("nbinom cases works", {
   # try negbinR
   system.time({
     fit.fast <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
-                   method="negbinR")
+                   method="nbinomR")
   })
   #plot(beta.cond, fit.fast$map[,2])
   #plot(fit$map[,1], fit.fast$map[,1])

@@ -115,20 +115,21 @@ system.time({
 str(fit$prior.control)
 ```
 
+We are working on faster implementations of apeglm. This version
+`method="nbinomR"` is 5-6x faster than the default `method="general"`.
+
 ```{r echo=FALSE, eval=FALSE}
-# we are working on faster implementations of apeglm
-# this version is 3-4x faster but has issues with MAP and Hessian right now
 system.time({
-  fit.fast <- apeglm(Y=assay(airway)[5:10,], x=x,
+  fit.fast <- apeglm(Y=assay(airway), x=x,
                      log.lik=NULL,
-                     param=param[5:10],
+                     param=param,
                      coef=ncol(x),
                      threshold=log(2) * 1,
                      mle=mle,
-                     offset=offset[5:10,],
-                     method="negbinR")
+                     offset=offset,
+                     method="nbinomR")
 })
-plot(fit$map[,5], fit.fast$map[,5])
+summary(abs(fit$map[,5] - fit.fast$map[,5]))
 sum(is.na(fit$sd[,1]))
 sum(is.na(fit.fast$sd[,1]))
 ```
@@ -337,7 +338,7 @@ abline(h=0,col=rgb(1,0,0,.5))
 ```{r}
 logit <- function(x) log(x/(1-x))
 logit(.75)
-table(abs(logit(prob[sofsval < .01])) > .5)
+table(abs(logit(prob[fofs.val < .01])) > .5)
 ```
 
 # Acknowledgments
