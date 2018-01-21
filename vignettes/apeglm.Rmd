@@ -118,7 +118,7 @@ str(fit$prior.control)
 We are working on faster implementations of apeglm. This version
 `method="nbinomR"` is 5-6x faster than the default `method="general"`.
 
-```{r echo=FALSE, eval=FALSE}
+```{r}
 system.time({
   fit.fast <- apeglm(Y=assay(airway), x=x,
                      log.lik=NULL,
