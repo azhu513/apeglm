@@ -546,7 +546,7 @@ optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
   # note we work with the negative log posterior
   fn <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, const) {
     xbeta <- x %*% beta
-    prior <- sum(-beta[no.shrink]^2/(2*sigma^2)) + sum(-log(1 + beta[shrink]^2/S^2))
+    prior <- sum(-beta[no.shrink]^2/(2*sigma^2)) + sum(-log1p(beta[shrink]^2/S^2))
     -sum(weights * (y * xbeta - (y + size) * log(size + exp(xbeta + offset)))) - prior + const
   }
   const <- -fn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
