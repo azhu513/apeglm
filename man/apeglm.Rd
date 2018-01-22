@@ -85,7 +85,8 @@ this should only be a vector, used when \code{param} specifies a single paramete
 The default is "general" which allows the user to specify a likelihood
 in a general way. Alternatives for faster performance with the Negative Binomial
 likelihood are "nbinomR" and "nbinomC", which should provide increasing
-benefits respectively in terms of speed. These second two options will
+benefits respectively in terms of speed. These require the
+prior degrees of freedom for the distribution to be 1, and will
 ignore any function provided to the \code{log.lik} argument, and \code{param}
 should specify the dispersion parameter (such that Var = mu + param mu^2).}
 

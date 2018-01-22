@@ -74,7 +74,8 @@
 #' The default is "general" which allows the user to specify a likelihood
 #' in a general way. Alternatives for faster performance with the Negative Binomial
 #' likelihood are "nbinomR" and "nbinomC", which should provide increasing
-#' benefits respectively in terms of speed. These second two options will
+#' benefits respectively in terms of speed. These require the
+#' prior degrees of freedom for the distribution to be 1, and will
 #' ignore any function provided to the \code{log.lik} argument, and \code{param}
 #' should specify the dispersion parameter (such that Var = mu + param mu^2).
 #' @param optim.method the method passed to \code{optim}
@@ -204,6 +205,12 @@ apeglm <- function(Y, x, log.lik,
     prior.control$prior.scale <- prior.scale
   }
 
+  if (method != "general") {
+    stopifnot(prior.control$prior.df == 1)
+    stopifnot(prior.control$prior.mean == 0)
+    stopifnot(prior.control$prior.no.shrink.mean == 0)
+  }
+  
   stopifnot(ncol(Y) == nrow(x))
   interval.type <- match.arg(interval.type)
   method <- match.arg(method)
