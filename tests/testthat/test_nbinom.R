@@ -1,6 +1,7 @@
 context("nbinom")
 test_that("nbinom cases works", {
 
+  set.seed(1)
   n.per.group <- 5
   n <- n.per.group * 2
   m <- 100

@@ -73,11 +73,15 @@
 #' @param method options for how apeglm will find the posterior mode and SD.
 #' The default is "general" which allows the user to specify a likelihood
 #' in a general way. Alternatives for faster performance with the Negative Binomial
-#' likelihood are "nbinomR" and "nbinomC", which should provide increasing
-#' benefits respectively in terms of speed. These require the
-#' prior degrees of freedom for the distribution to be 1, and will
-#' ignore any function provided to the \code{log.lik} argument, and \code{param}
-#' should specify the dispersion parameter (such that Var = mu + param mu^2).
+#' likelihood are:
+#' "nbinomR", "nbinomCR", and "nbinomC".
+#' These alternative methods should provide increasing benefits respectively in terms of speed.
+#' Note that "nbinomC" only returns the MAP for the coefficients,
+#' without calculating, e.g. posterior SD or other quantities.
+#' These require the prior degrees of freedom for the distribution to be 1,
+#' and will ignore any function provided to the \code{log.lik} argument.
+#' \code{param} should specify the dispersion parameter (such that Var = mu + param mu^2).
+#' 
 #' @param optim.method the method passed to \code{optim}
 #' @param bounds the bounds for the numeric optimization 
 #'  
@@ -103,12 +107,15 @@
 #'
 #' Note that all parameters associated with coefficients,
 #' e.g. \code{map}, \code{sd}, etc., are returned on the natural log scale for a log link GLM.
-#' 
+#'
+#' @importFrom Rcpp sourceCpp
 #' @importFrom SummarizedExperiment assay rowRanges
 #' @importFrom GenomicRanges mcols<-
-#' @importFrom stats dnorm pnorm qnorm sd dt optim uniroot
+#' @importFrom stats dnorm pnorm qnorm sd dt optim optimHess uniroot
 #' @importFrom utils head tail
 #' @importFrom methods is
+#'
+#' @useDynLib apeglm
 #' 
 #' @export
 #' 
@@ -175,7 +182,7 @@ apeglm <- function(Y, x, log.lik,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
-                   method=c("general","nbinomR","nbinomC"),
+                   method=c("general","nbinomR","nbinomCR","nbinomC"),
                    optim.method="BFGS",
                    bounds=c(-Inf,Inf)) {
 
@@ -190,11 +197,15 @@ apeglm <- function(Y, x, log.lik,
     )
   }
 
+  interval.type <- match.arg(interval.type)
+  method <- match.arg(method)
+  
+  stopifnot(ncol(Y) == nrow(x))
+  stopifnot(multiplier > 0)  
+  
   if (no.shrink) {
     prior.control$no.shrink <- seq_len(ncol(x))
   }
-
-  stopifnot(multiplier > 0)
   
   if (!is.null(mle)) {
     stopifnot(!is.null(coef))
@@ -210,11 +221,7 @@ apeglm <- function(Y, x, log.lik,
     stopifnot(prior.control$prior.mean == 0)
     stopifnot(prior.control$prior.no.shrink.mean == 0)
   }
-  
-  stopifnot(ncol(Y) == nrow(x))
-  interval.type <- match.arg(interval.type)
-  method <- match.arg(method)
-  
+    
   if (!is.matrix(param)) param <- as.matrix(param, ncol=1)
   # don't have code yet for use of threshold with param.sd
   stopifnot(is.null(param.sd) | is.null(threshold))
@@ -259,14 +266,14 @@ apeglm <- function(Y, x, log.lik,
   
   intercept.idx <- rowSums(x == 0) == nvars - 1
   if (nrows >= 2) {
-    intercept <- rowMeans(Y[,intercept.idx,drop=FALSE])
+    basemean <- rowMeans(Y[,intercept.idx,drop=FALSE])
   } else {
-    intercept <- mean(Y[,intercept.idx,drop=FALSE])
+    basemean <- mean(Y[,intercept.idx,drop=FALSE])
   }
   
   result <- list()
   result$map <- matrix(nrow=nrows, ncol=nvars,
-                         dimnames=list(rownames, xnames))
+                       dimnames=list(rownames, xnames))
   result$sd <- matrix(nrow=nrows, ncol=nvars,
                       dimnames=list(rownames, xnames))
   result$prior.control <- prior.control
@@ -307,12 +314,45 @@ apeglm <- function(Y, x, log.lik,
     result$contrast.sd <- matrix(nrow=nrows, ncol=ncontr,
                                  dimnames=contrast.nms)
   }
-    
+
+  if (method %in% c("nbinomC","nbinomCR")) {
+    nonzero <- rowSums(Y) > 0
+    # the C++ code uses transposed data (samples x genes)
+    YNZ <- t(Y[nonzero,,drop=FALSE])
+    if (is.null(weights)) {
+      weights <- matrix(1, nrow=nrow(Y), ncol=ncol(Y))
+    }
+    if (is.null(offset)) {
+      offset <- matrix(0, nrow=nrow(Y), ncol=ncol(Y))
+    }
+    weightsNZ <- t(weights[nonzero,,drop=FALSE])
+    offsetNZ <- t(offset[nonzero,,drop=FALSE])
+    size <- 1/param[nonzero]
+    sigma <- prior.control$prior.no.shrink.scale
+    S <- prior.control$prior.scale
+    no.shrink <- prior.control$no.shrink
+    shrink <- setdiff(seq_len(ncol(x)), no.shrink)
+    intercept <- ifelse(basemean[nonzero] > 0, log(basemean[nonzero]), 0)
+    init <- rbind(intercept, matrix(0, nrow=ncol(x)-1, ncol=sum(nonzero)))
+    cnst <- sapply(seq_len(sum(nonzero)), function(i) {
+      nbinomFn(init[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+               offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+               shrink=shrink, 0) + 20
+    })
+    betas <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
+                       offset=offsetNZ, sigma2=sigma^2, S2=S^2,
+                       no_shrink=no.shrink, shrink=shrink,
+                       intercept=intercept, cnst=cnst)
+    result$map[nonzero,] <- t(betas)
+    if (method=="nbinomC") return(result)
+  }
+  
   for (i in seq_len(nrows)) {
     weights.row <- if (is.null(weights)) NULL else weights[i,]
     offset.row <- if (is.null(offset)) NULL else offset[i,]
     param.i <- if (is.null(param)) NULL else param[i,,drop=TRUE] # drop the dimension
     param.sd.i <- if (is.null(param.sd)) NULL else param.sd[i]
+    prefit.beta <- if (method == "nbinomCR") result$map[i,] else NULL
     row.result <- apeglm.single(y = Y[i,], x=x, log.lik=log.lik, 
                                 param=param.i,
                                 coef=coef,
@@ -327,7 +367,8 @@ apeglm <- function(Y, x, log.lik,
                                 ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
                                 log.link=log.link,
                                 param.sd=param.sd.i,
-                                intercept=intercept[i],
+                                basemean=basemean[i],
+                                prefit.beta=prefit.beta,
                                 method=method,
                                 optim.method=optim.method,
                                 bounds=bounds)
@@ -405,7 +446,8 @@ apeglm.single <- function(y, x, log.lik,
                           ngrid.nuis, nsd.nuis,
                           log.link=TRUE,
                           param.sd,
-                          intercept,
+                          basemean,
+                          prefit.beta,
                           method,
                           optim.method,
                           bounds) {
@@ -414,14 +456,18 @@ apeglm.single <- function(y, x, log.lik,
     out <- buildNAOut(coef, interval.type, threshold, contrasts)
     return(out)
   }
-    
-  init <- numeric(ncol(x))
-  if (log.link) {
-    if (intercept == 0) {
-      init[1] <- 0
-    } else {
-      init[1] <- log(intercept)
+
+  if (is.null(prefit.beta)) {
+    init <- numeric(ncol(x))
+    if (log.link) {
+      if (basemean == 0) {
+        init[1] <- 0
+      } else {
+        init[1] <- log(basemean)
+      }
     }
+  } else {
+    init <- prefit.beta
   }
 
   # numerical optimization to find the MAP and posterior SD
@@ -430,7 +476,8 @@ apeglm.single <- function(y, x, log.lik,
   }
 
   if (method == "general") {
-    o <- optim(par = init, fn = log.post, log.lik = log.lik, log.prior = log.prior, 
+    o <- optim(par = init, fn = log.post,
+               log.lik = log.lik, log.prior = log.prior, 
                y = y, x = x, param = param,
                weights = weights, offset = offset, 
                prior.control = prior.control, 
@@ -443,6 +490,14 @@ apeglm.single <- function(y, x, log.lik,
                      prior.control=prior.control,
                      bounds=bounds,
                      optim.method=optim.method)
+  } else if (method == "nbinomCR") {
+    o <- list()
+    o$par <- init
+    o$hessian <- optimNbinomHess(init=init, y=y, x=x, param=param,
+                                 weights=weights, offset=offset,
+                                 prior.control=prior.control)
+    o$convergence <- NA
+    o$counts <- NA
   }
   
   map <- o$par
@@ -487,7 +542,6 @@ apeglm.single <- function(y, x, log.lik,
                          ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
                          log.link=log.link,
                          param.sd=param.sd,
-                         intercept=intercept,
                          o=o, map=map, sigma=sigma, sd=sd, out=out)
     }
   } else {
@@ -529,43 +583,3 @@ buildNAOut <- function(coef, interval.type, threshold, contrasts) {
   }
   out
 }
-
-optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
-                        bounds, optim.method) {
-  if (is.null(weights)) {
-    weights <- 1
-  }
-  if (is.null(offset)) {
-    offset <- 0
-  }
-  size <- 1/param
-  no.shrink <- prior.control$no.shrink
-  shrink <- setdiff(seq_along(init), no.shrink)
-  sigma <- prior.control$prior.no.shrink.scale
-  S <- prior.control$prior.scale
-  # note we work with the negative log posterior
-  fn <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, const) {
-    xbeta <- x %*% beta
-    prior <- sum(-beta[no.shrink]^2/(2*sigma^2)) + sum(-log1p(beta[shrink]^2/S^2))
-    -sum(weights * (y * xbeta - (y + size) * log(size + exp(xbeta + offset)))) - prior + const
-  }
-  const <- -fn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
-  gr <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, const) {
-    xbeta <- x %*% beta
-    exbetaoff <- exp(xbeta + offset)
-    prior <- numeric(length(beta))
-    prior[no.shrink] <- -beta[no.shrink]/sigma^2
-    prior[shrink] <- -2*beta[shrink]/(S^2 + beta[shrink]^2)
-    -t(x) %*% (weights * (y - (y + size) * exbetaoff / (size + exbetaoff))) - prior
-  }
-  o <- optim(par=init, fn=fn, gr=gr,
-             x=x, y=y, size=size,
-             weights=weights, offset=offset,
-             sigma=sigma, S=S, no.shrink=no.shrink,
-             shrink=shrink, const=const,
-             lower=bounds[1], upper=bounds[2],
-             hessian=TRUE, method=optim.method)
-  o$hessian <- -1 * o$hessian
-  o
-}
-

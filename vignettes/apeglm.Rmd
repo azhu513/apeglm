@@ -56,7 +56,7 @@ head(assay(airway))
 For demonstration, we will just use the first 5000 genes of the `airway` dataset.
 
 ```{r}
-keep <- head(which(rowSums(assay(airway)) > 0), 5000)
+keep <- head(which(rowSums(assay(airway)) > 10), 5000)
 airway <- airway[keep,]
 ```
 
@@ -104,34 +104,45 @@ from log2 scale to natural log scale.
 ```{r}
 library(apeglm)
 system.time({
-  fit <- apeglm(Y=airway, x=x,
-                log.lik=logLikNB,
-                param=param,
-                coef=ncol(x),
-                threshold=log(2) * 1,
-                mle=mle,
-                offset=offset)
+  fit <- apeglm(Y=airway, x=x, log.lik=logLikNB, param=param, coef=ncol(x),
+                threshold=log(2) * 1, mle=mle, offset=offset)
 })
 str(fit$prior.control)
 ```
 
-We are working on faster implementations of apeglm. This version
-`method="nbinomR"` is 5-6x faster than the default `method="general"`.
+There are faster implementations of apeglm specifically for negative
+binomial likelihoods. The version `method="nbinomR"` is ~5 times
+faster than the default `method="general"`. 
 
 ```{r}
 system.time({
-  fit.fast <- apeglm(Y=assay(airway), x=x,
-                     log.lik=NULL,
-                     param=param,
-                     coef=ncol(x),
-                     threshold=log(2) * 1,
-                     mle=mle,
-                     offset=offset,
-                     method="nbinomR")
+  fitR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
+                 threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomR")
 })
-summary(abs(fit$map[,5] - fit.fast$map[,5]))
-sum(is.na(fit$sd[,1]))
-sum(is.na(fit.fast$sd[,1]))
+#plot(fit$map[,5], fitR$map[,5])
+summary(abs(fit$map[,5] - fitR$map[,5]))
+sum(is.na(fitR$sd[,1]))
+```
+
+```{r, eval=FALSE, echo=FALSE}
+# The version `method="nbinomCR"` is ~8 times faster than the default `method="general"`. 
+system.time({
+  fitCR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
+                 threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomCR")
+})
+plot(fit$map[,5], fitCR$map[,5])
+summary(abs(fit$map[,5] - fitCR$map[,5]))
+sum(is.na(fitCR$sd[,1]))
+```
+
+```{r, eval=FALSE, echo=FALSE}
+# The version `method="nbinomC"` returns only the MAP coefficients and
+# is ~50 times faster than the default `method="general"`. 
+system.time({
+  fitC <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
+                 threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomC")
+})
+summary(abs(fit$map[,5] - fitC$map[,5]))
 ```
 
 Among other output, we have the estimated coefficients attached to the

@@ -11,7 +11,6 @@ gridResults <- function(y, x, log.lik,
                         ngrid.nuis, nsd.nuis,
                         log.link,
                         param.sd,
-                        intercept,
                         o, map, sigma, sd, out) {
 
   corr.sigma <- sigma / outer(sd, sd)

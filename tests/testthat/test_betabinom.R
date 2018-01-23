@@ -2,6 +2,8 @@ context("betabinom")
 test_that("example on beta-binomial", {
 
   library(emdbook)
+  
+  set.seed(1)
   n.per.group <- 20
   n <- 2 * n.per.group
   condition <- factor(rep(1:2,each=n.per.group))

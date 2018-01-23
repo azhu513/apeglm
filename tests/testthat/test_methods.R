@@ -1,6 +1,7 @@
 context("methods")
 test_that("alternative methods give same result", {
 
+  set.seed(1)
   n.per.group <- 5
   n <- n.per.group * 2
   m <- 1000
@@ -21,31 +22,41 @@ test_that("alternative methods give same result", {
   system.time({
     fit <- apeglm(Y=Y, x=x, log.lik=logLikNB, offset=offset, param=param, coef=2)
   })
-  #plot(beta.cond, fit$map[,2])
 
   # method="nbinomR"
   system.time({
-    fit.fast <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
+    fitR <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
                        method="nbinomR")
   })
-  expect_equal(fit$map[,1], fit.fast$map[,1], tolerance=1e-3)
-  expect_equal(fit$map[,2], fit.fast$map[,2], tolerance=1e-3)
-  expect_true(sum(is.na(fit.fast$sd[,1])) == 0)
-  
-  #plot(fit$map[,1], fit.fast$map[,1])
-  #plot(fit$map[,2], fit.fast$map[,2])
+  expect_equal(fit$map[,1], fitR$map[,1], tolerance=1e-3)
+  expect_equal(fit$map[,2], fitR$map[,2], tolerance=1e-3)
+  expect_true(sum(is.na(fitR$sd[,1])) == 0)
   
   # test no offset specified
-  fit.fast <- apeglm(Y=Y, x=x, log.lik=NULL, param=param, coef=2, method="nbinomR")
+  fitR <- apeglm(Y=Y, x=x, log.lik=NULL, param=param, coef=2, method="nbinomR")
 
   # test with weights
   fit.w <- apeglm(Y=Y, x=x, log.lik=logLikNB,
-                  weights=weights, offset=offset, param=param, coef=2)
-  
-  fit.w.fast <- apeglm(Y=Y, x=x, log.lik=NULL,
-                       weights=weights, offset=offset, param=param, coef=2,
-                       method="nbinomR")
-  #plot(fit$map[,2], fit.w$map[,2])
-  #plot(fit.w$map[,2], fit.w.fast$map[,2])
+                  weights=weights, offset=offset, param=param, coef=2)  
+  fitR.w <- apeglm(Y=Y, x=x, log.lik=NULL,
+                   weights=weights, offset=offset, param=param, coef=2,
+                   method="nbinomR")
+  expect_equal(fit.w$map[,2], fitR.w$map[,2], tolerance=1e-3)
+  expect_true(sum(is.na(fitR.w$sd[,1])) == 0)
 
+  # pretty fast in C++, only returns MAP coefficients
+  system.time({
+    fitC <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
+                       method="nbinomC")
+  })
+  expect_equal(fit$map[,1], fitC$map[,1], tolerance=1e-3)
+  expect_equal(fit$map[,2], fitC$map[,2], tolerance=1e-3)
+
+  system.time({
+    fitCR <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
+                       method="nbinomCR")
+  })
+  expect_equal(fit$sd[,1], fitCR$sd[,1], tolerance=1e-3)
+  expect_equal(fit$sd[,2], fitCR$sd[,2], tolerance=1e-3)
+  
 })

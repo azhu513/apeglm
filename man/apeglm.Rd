@@ -9,7 +9,7 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
   offset = NULL, flip.sign = TRUE, prior.control, multiplier = 1,
   ngrid = 50, nsd = 5, ngrid.nuis = 5, nsd.nuis = 2, log.link = TRUE,
-  param.sd = NULL, method = c("general", "nbinomR", "nbinomC"),
+  param.sd = NULL, method = c("general", "nbinomR", "nbinomCR", "nbinomC"),
   optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
@@ -84,11 +84,14 @@ this should only be a vector, used when \code{param} specifies a single paramete
 \item{method}{options for how apeglm will find the posterior mode and SD.
 The default is "general" which allows the user to specify a likelihood
 in a general way. Alternatives for faster performance with the Negative Binomial
-likelihood are "nbinomR" and "nbinomC", which should provide increasing
-benefits respectively in terms of speed. These require the
-prior degrees of freedom for the distribution to be 1, and will
-ignore any function provided to the \code{log.lik} argument, and \code{param}
-should specify the dispersion parameter (such that Var = mu + param mu^2).}
+likelihood are:
+"nbinomR", "nbinomCR", and "nbinomC".
+These alternative methods should provide increasing benefits respectively in terms of speed.
+Note that "nbinomC" only returns the MAP for the coefficients,
+without calculating, e.g. posterior SD or other quantities.
+These require the prior degrees of freedom for the distribution to be 1,
+and will ignore any function provided to the \code{log.lik} argument.
+\code{param} should specify the dispersion parameter (such that Var = mu + param mu^2).}
 
 \item{optim.method}{the method passed to \code{optim}}
 
