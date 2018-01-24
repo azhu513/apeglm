@@ -70,11 +70,11 @@ public:
 };
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
-			      Rcpp::NumericVector size, Rcpp::NumericMatrix weights,
-			      Rcpp::NumericMatrix offset, double sigma2, double S2,
-			      Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
-			      Rcpp::NumericVector intercept, Rcpp::NumericVector cnst)
+Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
+		     Rcpp::NumericVector size, Rcpp::NumericMatrix weights,
+		     Rcpp::NumericMatrix offset, double sigma2, double S2,
+		     Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
+		     Rcpp::NumericVector intercept, Rcpp::NumericVector cnst)
 {
 
   // this optimization code is modeled after the RcppNumerical example:
@@ -99,8 +99,12 @@ Rcpp::NumericMatrix nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
 
   int G = Y.ncol(); // e.g. number of genes
   int B = x.ncol(); // e.g. number of betas
+
   Eigen::MatrixXd betas(B, G);
   Eigen::VectorXd beta(B);
+
+  Rcpp::NumericVector value(G);
+  Rcpp::IntegerVector convergence(G);
 
   double fopt;
   for (int i = 0; i < G; i++) {
@@ -109,7 +113,11 @@ Rcpp::NumericMatrix nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
     beta[0] = mintercept[i];
     int status = optim_lbfgs(nll, beta, fopt);
     betas.col(i) = beta;
+    value[i] = fopt;
+    convergence[i] = status;
   }
 
-  return Rcpp::wrap(betas);
+  return Rcpp::List::create(Rcpp::Named("betas") = betas,
+			    Rcpp::Named("value") = value,
+			    Rcpp::Named("convergence") = convergence);
 }

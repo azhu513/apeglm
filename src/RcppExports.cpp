@@ -7,7 +7,7 @@
 using namespace Rcpp;
 
 // nbinomGLM
-Rcpp::NumericMatrix nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y, Rcpp::NumericVector size, Rcpp::NumericMatrix weights, Rcpp::NumericMatrix offset, double sigma2, double S2, Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink, Rcpp::NumericVector intercept, Rcpp::NumericVector cnst);
+Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y, Rcpp::NumericVector size, Rcpp::NumericMatrix weights, Rcpp::NumericMatrix offset, double sigma2, double S2, Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink, Rcpp::NumericVector intercept, Rcpp::NumericVector cnst);
 RcppExport SEXP _apeglm_nbinomGLM(SEXP xSEXP, SEXP YSEXP, SEXP sizeSEXP, SEXP weightsSEXP, SEXP offsetSEXP, SEXP sigma2SEXP, SEXP S2SEXP, SEXP no_shrinkSEXP, SEXP shrinkSEXP, SEXP interceptSEXP, SEXP cnstSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

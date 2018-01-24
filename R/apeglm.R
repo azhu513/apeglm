@@ -339,11 +339,14 @@ apeglm <- function(Y, x, log.lik,
                offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
                shrink=shrink, 0) + 20
     })
-    betas <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
-                       offset=offsetNZ, sigma2=sigma^2, S2=S^2,
-                       no_shrink=no.shrink, shrink=shrink,
-                       intercept=intercept, cnst=cnst)
-    result$map[nonzero,] <- t(betas)
+    out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
+                     offset=offsetNZ, sigma2=sigma^2, S2=S^2,
+                     no_shrink=no.shrink, shrink=shrink,
+                     intercept=intercept, cnst=cnst)
+    result$map[nonzero,] <- t(out$betas)
+    result$diag[nonzero,"conv"] <- out$convergence
+    result$diag <- cbind(result$diag, value=rep(NA, nrow(result$diag)))
+    result$diag[nonzero,"value"] <- out$value
     if (method=="nbinomC") return(result)
   }
   
@@ -385,7 +388,11 @@ apeglm <- function(Y, x, log.lik,
         }
       }
     }
-    result$diag[i,] <- row.result$diag
+    # if using "nbinomCR", then the optimization was already performed above,
+    # and the diagnostic information already recorded...
+    if (!method == "nbinomCR") {
+      result$diag[i,] <- row.result$diag
+    }
     if (!missing(contrasts)) { 
       result$contrast.map[i,] <- row.result$contrast.map
       result$contrast.sd[i,] <- row.result$contrast.sd
