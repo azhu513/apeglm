@@ -14,7 +14,8 @@ test_that("alternative methods give same result", {
   mu <- exp(t(x %*% t(beta.mat)))
   Y <- matrix(rnbinom(m*n, mu=mu, size=1/.1), ncol=n)
   param <- matrix(0.1, nrow=m, ncol=1)
-  offset <- matrix(0, nrow=m, ncol=n)
+  sf <- 2^rep(seq(-.5,.5,length=n.per.group),2)
+  offset <- matrix(log(sf), nrow=m, ncol=n, byrow=TRUE)
   weights <- matrix(1, nrow=m, ncol=n)
   weights[,c(1,n.per.group+1)] <- 0.01
 
@@ -47,10 +48,12 @@ test_that("alternative methods give same result", {
   # pretty fast in C++, only returns MAP coefficients
   system.time({
     fitC <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,
-                       method="nbinomC")
+                   method="nbinomC")
   })
+
   expect_equal(fit$map[,1], fitC$map[,1], tolerance=1e-3)
   expect_equal(fit$map[,2], fitC$map[,2], tolerance=1e-3)
+  #expect_equal(fitC$diag[,"value"], fitC$diag[,"valueR"], tolerance=1e-3)
 
   system.time({
     fitCR <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=2,

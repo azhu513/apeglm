@@ -111,38 +111,37 @@ str(fit$prior.control)
 ```
 
 There are faster implementations of apeglm specifically for negative
-binomial likelihoods. The version `method="nbinomR"` is ~5 times
-faster than the default `method="general"`. 
+binomial likelihoods. The version `nbinomR` is ~5 times
+faster than the default `general`. 
 
 ```{r}
 system.time({
   fitR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomR")
 })
-#plot(fit$map[,5], fitR$map[,5])
-summary(abs(fit$map[,5] - fitR$map[,5]))
-sum(is.na(fitR$sd[,1]))
+rbind(summary(abs(fit$map[,5] - fitR$map[,5])),
+      summary(abs(fit$sd[,5] - fitR$sd[,5])))
 ```
 
-```{r, eval=FALSE, echo=FALSE}
-# The version `method="nbinomCR"` is ~8 times faster than the default `method="general"`. 
+```{r eval=FALSE, echo=FALSE}
+#The version `nbinomCR` is ~8 times faster than the default `general`. 
 system.time({
   fitCR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomCR")
 })
-plot(fit$map[,5], fitCR$map[,5])
-summary(abs(fit$map[,5] - fitCR$map[,5]))
-sum(is.na(fitCR$sd[,1]))
+rbind(summary(abs(fit$map[,5] - fitCR$map[,5])),
+      summary(abs(fit$sd[,5] - fitCR$sd[,5])))
 ```
 
-```{r, eval=FALSE, echo=FALSE}
-# The version `method="nbinomC"` returns only the MAP coefficients and
-# is ~50 times faster than the default `method="general"`. 
+```{r eval=FALSE, echo=FALSE}
+#The version `nbinomC` returns only the MAP coefficients and
+#can be more than 60 times faster than the default `general`. The MAP
+#coefficients are the same as returned by `nbinomCR` above, we just
+#skip the calculation of posterior SD.
 system.time({
   fitC <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomC")
 })
-summary(abs(fit$map[,5] - fitC$map[,5]))
 ```
 
 Among other output, we have the estimated coefficients attached to the

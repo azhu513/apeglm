@@ -1,12 +1,12 @@
 # negative log posterior
-nbinomFn <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, const) {
+nbinomFn <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, cnst) {
   xbeta <- x %*% beta
   prior <- sum(-beta[no.shrink]^2/(2*sigma^2)) + sum(-log1p(beta[shrink]^2/S^2))
-  -sum(weights * (y * xbeta - (y + size) * log(size + exp(xbeta + offset)))) - prior + const
+  -sum(weights * (y * xbeta - (y + size) * log(size + exp(xbeta + offset)))) - prior + cnst
 }
 
 # gradient of negative log posterior
-nbinomGr <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, const) {
+nbinomGr <- function(beta, x, y, size, weights, offset, sigma, S, no.shrink, shrink, cnst) {
   xbeta <- x %*% beta
   exbetaoff <- exp(xbeta + offset)
   prior <- numeric(length(beta))
@@ -28,12 +28,12 @@ optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
   shrink <- setdiff(seq_along(init), no.shrink)
   sigma <- prior.control$prior.no.shrink.scale
   S <- prior.control$prior.scale
-  const <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
+  cnst <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
   o <- optim(par=init, fn=nbinomFn, gr=nbinomGr,
              x=x, y=y, size=size,
              weights=weights, offset=offset,
              sigma=sigma, S=S, no.shrink=no.shrink,
-             shrink=shrink, const=const,
+             shrink=shrink, cnst=cnst,
              lower=bounds[1], upper=bounds[2],
              hessian=TRUE, method=optim.method)
   o$hessian <- -1 * o$hessian
@@ -53,10 +53,10 @@ optimNbinomHess <- function(init, y, x, param, weights, offset, prior.control,
   shrink <- setdiff(seq_along(init), no.shrink)
   sigma <- prior.control$prior.no.shrink.scale
   S <- prior.control$prior.scale
-  const <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
+  cnst <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
   -1 * optimHess(par=init, fn=nbinomFn, gr=nbinomGr,
                  x=x, y=y, size=size,
                  weights=weights, offset=offset,
                  sigma=sigma, S=S, no.shrink=no.shrink,
-                 shrink=shrink, const=const)
+                 shrink=shrink, cnst=cnst)
 }

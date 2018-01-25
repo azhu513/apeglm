@@ -30,15 +30,16 @@ public:
     int B = x.cols(); // e.g. number of betas
     
     Eigen::ArrayXd xbeta = x * beta;
-    Eigen::ArrayXd exp_xbeta_off = xbeta.exp().array() + offset.col(i).array();
+    Eigen::ArrayXd xbeta_off = xbeta + offset.col(i).array();
+    Eigen::ArrayXd exp_xbeta_off = xbeta_off.exp();
 
     Eigen::ArrayXd a = Y.col(i).array() + size[i];
     Eigen::ArrayXd b = exp_xbeta_off + size[i];
 
-    Eigen::VectorXd c = a * exp_xbeta_off * b.inverse() - Y.col(i).array();
+    Eigen::VectorXd c = Y.col(i).array() - a * exp_xbeta_off * b.inverse();
     Eigen::VectorXd cw = c.array() * weights.col(i).array();
     
-    Eigen::ArrayXd d = a * b.log() - Y.col(i).array() * xbeta;
+    Eigen::ArrayXd d = Y.col(i).array() * xbeta - a * b.log();
     Eigen::ArrayXd dw = d * weights.col(i).array();
 
     double neg_prior = 0.0;
@@ -59,11 +60,13 @@ public:
     }
 
     // this is the negative log posterior plus a constant to keep it above 0
-    const double f = dw.sum() + neg_prior + cnst[i];
+    // const double f = -1.0 * dw.sum() + neg_prior + cnst[i];
+    const double f = -1.0 * dw.sum() / cnst[i] + neg_prior / cnst[i] + 1.0;
 
     // this is the gradient of the negative log posterior
-    Eigen::ArrayXd d_neg_lik = x.transpose() * cw;
-    grad = d_neg_lik + d_neg_prior;
+    Eigen::ArrayXd d_neg_lik = -1.0 * x.transpose() * cw;
+    // grad = d_neg_lik + d_neg_prior;
+    grad = d_neg_lik / cnst[i] + d_neg_prior / cnst[i];
     
     return f;
   }
@@ -74,7 +77,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
 		     Rcpp::NumericVector size, Rcpp::NumericMatrix weights,
 		     Rcpp::NumericMatrix offset, double sigma2, double S2,
 		     Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
-		     Rcpp::NumericVector intercept, Rcpp::NumericVector cnst)
+		     Rcpp::NumericVector cnst)
 {
 
   // this optimization code is modeled after the RcppNumerical example:
@@ -94,7 +97,6 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
   const MapMat moffset = Rcpp::as<MapMat>(offset);
   const MapVec mno_shrink = Rcpp::as<MapVec>(no_shrink);
   const MapVec mshrink = Rcpp::as<MapVec>(shrink);
-  const MapVec mintercept = Rcpp::as<MapVec>(intercept);
   const MapVec mcnst = Rcpp::as<MapVec>(cnst);
 
   int G = Y.ncol(); // e.g. number of genes
@@ -110,8 +112,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
   for (int i = 0; i < G; i++) {
     optimFun nll(mx, mY, msize, mweights, moffset, sigma2, S2, mno_shrink, mshrink, mcnst, i);
     beta.setZero();
-    beta[0] = mintercept[i];
-    int status = optim_lbfgs(nll, beta, fopt);
+    int status = optim_lbfgs(nll, beta, fopt, 300, 1e-8, 1e-8);
     betas.col(i) = beta;
     value[i] = fopt;
     convergence[i] = status;

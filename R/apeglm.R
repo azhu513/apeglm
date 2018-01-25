@@ -332,21 +332,26 @@ apeglm <- function(Y, x, log.lik,
     S <- prior.control$prior.scale
     no.shrink <- prior.control$no.shrink
     shrink <- setdiff(seq_len(ncol(x)), no.shrink)
-    intercept <- ifelse(basemean[nonzero] > 0, log(basemean[nonzero]), 0)
-    init <- rbind(intercept, matrix(0, nrow=ncol(x)-1, ncol=sum(nonzero)))
+    init <- matrix(0, nrow=ncol(x), ncol=sum(nonzero))
     cnst <- sapply(seq_len(sum(nonzero)), function(i) {
       nbinomFn(init[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
                offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
-               shrink=shrink, 0) + 20
+               shrink=shrink, cnst=0)
     })
     out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
-                     no_shrink=no.shrink, shrink=shrink,
-                     intercept=intercept, cnst=cnst)
+                     no_shrink=no.shrink, shrink=shrink, cnst=cnst)
+    ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
+    ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+    ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+    ##            shrink=shrink, cnst=0)/cnst[i] + 1
+    ## })
     result$map[nonzero,] <- t(out$betas)
     result$diag[nonzero,"conv"] <- out$convergence
-    result$diag <- cbind(result$diag, value=rep(NA, nrow(result$diag)))
+    nas <- rep(NA, nrow(result$diag))
+    result$diag <- cbind(result$diag, value=nas)#, valueR=nas)
     result$diag[nonzero,"value"] <- out$value
+    #result$diag[nonzero,"valueR"] <- valueR
     if (method=="nbinomC") return(result)
   }
   
