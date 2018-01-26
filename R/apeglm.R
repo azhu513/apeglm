@@ -338,9 +338,11 @@ apeglm <- function(Y, x, log.lik,
                offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
                shrink=shrink, cnst=0)
     })
+    init <- rep(c(1,-1),length.out=ncol(x)) # rep(0,ncol(x))
     out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
-                     no_shrink=no.shrink, shrink=shrink, cnst=cnst)
+                     no_shrink=no.shrink, shrink=shrink,
+                     init=init, cnst=cnst)
     ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
     ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
     ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
@@ -369,7 +371,7 @@ apeglm <- function(Y, x, log.lik,
                                 threshold=threshold,
                                 contrasts=contrasts, 
                                 weights=weights.row, offset=offset.row,
-                                flip.sign = flip.sign,
+                                flip.sign=flip.sign,
                                 prior.control=prior.control,
                                 ngrid=ngrid, nsd=nsd,
                                 ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
@@ -385,11 +387,11 @@ apeglm <- function(Y, x, log.lik,
     if (!is.null(coef)) {
       result$fsr[i,] <- row.result$fsr
       result$interval[i,] <- row.result$ci
-      if (!is.null(threshold)){
+      if (!is.null(threshold) & !is.na(row.result$map[coef])) {
         if (flip.sign == TRUE & row.result$map[coef] < 0){ 
-          result$thresh[i,] <- 1 - row.result$thresh
+          result$thresh[i,] <- 1 - row.result$threshold
         } else {
-          result$thresh[i,] <- row.result$thresh
+          result$thresh[i,] <- row.result$threshold
         }
       }
     }

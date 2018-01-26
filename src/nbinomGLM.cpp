@@ -77,7 +77,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
 		     Rcpp::NumericVector size, Rcpp::NumericMatrix weights,
 		     Rcpp::NumericMatrix offset, double sigma2, double S2,
 		     Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
-		     Rcpp::NumericVector cnst)
+		     Rcpp::NumericVector init, Rcpp::NumericVector cnst)
 {
 
   // this optimization code is modeled after the RcppNumerical example:
@@ -97,6 +97,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
   const MapMat moffset = Rcpp::as<MapMat>(offset);
   const MapVec mno_shrink = Rcpp::as<MapVec>(no_shrink);
   const MapVec mshrink = Rcpp::as<MapVec>(shrink);
+  const MapVec minit = Rcpp::as<MapVec>(init);
   const MapVec mcnst = Rcpp::as<MapVec>(cnst);
 
   int G = Y.ncol(); // e.g. number of genes
@@ -111,7 +112,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
   double fopt;
   for (int i = 0; i < G; i++) {
     optimFun nll(mx, mY, msize, mweights, moffset, sigma2, S2, mno_shrink, mshrink, mcnst, i);
-    beta.setZero();
+    beta = minit;
     int status = optim_lbfgs(nll, beta, fopt, 300, 1e-8, 1e-8);
     betas.col(i) = beta;
     value[i] = fopt;
