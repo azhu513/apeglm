@@ -265,11 +265,7 @@ apeglm <- function(Y, x, log.lik,
   }
   
   intercept.idx <- rowSums(x == 0) == nvars - 1
-  if (nrows >= 2) {
-    basemean <- rowMeans(Y[,intercept.idx,drop=FALSE])
-  } else {
-    basemean <- mean(Y[,intercept.idx,drop=FALSE])
-  }
+  basemean <- rowMeans(Y[,intercept.idx,drop=FALSE])
   
   result <- list()
   result$map <- matrix(nrow=nrows, ncol=nvars,
@@ -285,8 +281,10 @@ apeglm <- function(Y, x, log.lik,
     if (coef < 2 | coef > ncol(x)){
       stop("'coef' must be between 2 and the number of columns of 'x'")
     }
-    result$fsr <- matrix(nrow=nrows, ncol=1, dimnames=list(rownames, xnames[coef]))
-    result$svalue <- matrix(nrow=nrows, ncol=1, dimnames=list(rownames, xnames[coef]))
+    result$fsr <- matrix(nrow=nrows, ncol=1,
+                         dimnames=list(rownames, xnames[coef]))
+    result$svalue <- matrix(nrow=nrows, ncol=1,
+                            dimnames=list(rownames, xnames[coef]))
     interval.nms <- list(rownames, c(paste0((1-interval.level)/2*100,"%"),
                                      paste0((1-(1-interval.level)/2)*100,"%")))
     result$interval <- matrix(nrow=nrows, ncol=2, dimnames=interval.nms)
@@ -297,7 +295,7 @@ apeglm <- function(Y, x, log.lik,
     if (interval.type != "laplace") {
       result$diag <- matrix(NA, nrow=nrows, ncol=4, 
                             dimnames=list(rownames,
-                                          c("conv","count","out.left","out.right")))
+                             c("conv","count","out.left","out.right")))
     } else {
       result$diag <- matrix(NA, nrow=nrows, ncol=2,
                             dimnames=list(rownames, c("conv","count")))
@@ -472,7 +470,7 @@ apeglm.single <- function(y, x, log.lik,
   }
 
   if (is.null(prefit.beta)) {
-    init <- numeric(ncol(x))
+    init <- rep(c(1,-1),length.out=ncol(x))
     if (log.link) {
       if (basemean == 0) {
         init[1] <- 0
