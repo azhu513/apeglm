@@ -292,18 +292,17 @@ apeglm <- function(Y, x, log.lik,
       result$thresh <- matrix(nrow=nrows, ncol=1,
                               dimnames=list(rownames, xnames[coef]))
     }
-    if (interval.type != "laplace") {
-      result$diag <- matrix(NA, nrow=nrows, ncol=4, 
-                            dimnames=list(rownames,
-                             c("conv","count","out.left","out.right")))
-    } else {
-      result$diag <- matrix(NA, nrow=nrows, ncol=2,
-                            dimnames=list(rownames, c("conv","count")))
-    }
-  } else {
-    result$diag <- matrix(NA, nrow=nrows, ncol=2,
-                          dimnames=list(rownames, c("conv","count")))
   }
+
+  # diagnostic columns differ if we use laplace or not for posterior estimation
+  if (interval.type != "laplace") {
+    diag.cols <- c("conv","count","value","out.left","out.right")
+  } else {
+    diag.cols <- c("conv","count","value")
+  }
+  result$diag <- matrix(NA, nrow=nrows, ncol=length(diag.cols), 
+                        dimnames=list(rownames, diag.cols))
+
   if (!missing(contrasts)) {
     ncontr <- ncol(contrasts)
     contrast.nms <- list(rownames, colnames(contrasts))
@@ -313,6 +312,7 @@ apeglm <- function(Y, x, log.lik,
                                  dimnames=contrast.nms)
   }
 
+  # TODO eventually, break this out in sub-function
   if (method %in% c("nbinomC","nbinomCR")) {
     nonzero <- rowSums(Y) > 0
     # the C++ code uses transposed data (samples x genes)
@@ -330,28 +330,29 @@ apeglm <- function(Y, x, log.lik,
     S <- prior.control$prior.scale
     no.shrink <- prior.control$no.shrink
     shrink <- setdiff(seq_len(ncol(x)), no.shrink)
-    init <- matrix(0, nrow=ncol(x), ncol=sum(nonzero))
+    init <- rep(0, ncol(x))
     cnst <- sapply(seq_len(sum(nonzero)), function(i) {
-      nbinomFn(init[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+      nbinomFn(init, x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
                offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
                shrink=shrink, cnst=0)
     })
-    init <- rep(c(1,-1),length.out=ncol(x)) # rep(0,ncol(x))
+    cnst <- ifelse(cnst > 1, cnst, 1)
+    init <- rep(c(1,-1),length.out=ncol(x))
     out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
                      no_shrink=no.shrink, shrink=shrink,
                      init=init, cnst=cnst)
-    ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
-    ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
-    ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
-    ##            shrink=shrink, cnst=0)/cnst[i] + 1
-    ## })
+    valueR <- sapply(seq_len(sum(nonzero)), function(i) {
+      nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+               offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+               shrink=shrink, cnst=0)/cnst[i] + 10
+    })
+    nas <- rep(NA, nrow(result$diag))
+    result$diag <- cbind(result$diag, valueR=nas)
+    result$diag[nonzero,"valueR"] <- valueR
     result$map[nonzero,] <- t(out$betas)
     result$diag[nonzero,"conv"] <- out$convergence
-    nas <- rep(NA, nrow(result$diag))
-    result$diag <- cbind(result$diag, value=nas)#, valueR=nas)
     result$diag[nonzero,"value"] <- out$value
-    #result$diag[nonzero,"valueR"] <- valueR
     if (method=="nbinomC") return(result)
   }
   
@@ -510,6 +511,7 @@ apeglm.single <- function(y, x, log.lik,
                                  prior.control=prior.control)
     o$convergence <- NA
     o$counts <- NA
+    o$value <- NA
   }
   
   map <- o$par
@@ -530,7 +532,7 @@ apeglm.single <- function(y, x, log.lik,
       stopifnot(is.null(param.sd)) # not implemented
       qn <- qnorm((1 - interval.level)/2,lower.tail=FALSE)
       out$ci <- c(map[coef] - qn * sd[coef], map[coef] + qn * sd[coef])
-      out$diag <- c(o$convergence, o$counts[1])
+      out$diag <- c(o$convergence, o$counts[1], o$value)
       out$fsr <- pnorm(-abs(map[coef]),0,sd[coef])
       if (!is.null(threshold)) {
         if (flip.sign) {
@@ -558,7 +560,7 @@ apeglm.single <- function(y, x, log.lik,
     }
   } else {
     # just diagnostic values (if coef not specified)
-    out$diag <- c(o$convergence, o$counts[1])
+    out$diag <- c(o$convergence, o$counts[1], o$value)
   }
   
   # calculate contrasts
@@ -576,18 +578,16 @@ apeglm.single <- function(y, x, log.lik,
 buildNAOut <- function(coef, interval.type, threshold, contrasts) {
   out <- list(map=NA, sd=NA)
   if (!is.null(coef)) {
-    out$diag <- if (interval.type != "laplace") {
-                  c(NA, NA, NA, NA)
-                } else {
-                  c(NA, NA)
-                }
     out$fsr <- NA
     out$ci <- c(NA, NA)
     if (!is.null(threshold)) {
       out$threshold <- NA
     }
+  }
+  if (interval.type != "laplace") {
+    out$diag <- c(NA, NA, NA, NA, NA)
   } else {
-    out$diag <- c(NA, NA)
+    out$diag <- c(NA, NA, NA)
   }
   if (!missing(contrasts)) {
     out$contrast.map <- NA

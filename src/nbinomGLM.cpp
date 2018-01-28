@@ -59,13 +59,12 @@ public:
       d_neg_prior[k] = 2.0 * beta[k] / (S2 + pow(beta[k], 2.0));
     }
 
-    // this is the negative log posterior plus a constant to keep it above 0
-    // const double f = -1.0 * dw.sum() + neg_prior + cnst[i];
-    const double f = -1.0 * dw.sum() / cnst[i] + neg_prior / cnst[i] + 1.0;
+    // this is the negative log posterior, scaled,
+    // plus a constant to keep it above 0
+    const double f = -1.0 * dw.sum() / cnst[i] + neg_prior / cnst[i] + 10.0;
 
-    // this is the gradient of the negative log posterior
+    // this is the gradient of the negative log posterior, scaled
     Eigen::ArrayXd d_neg_lik = -1.0 * x.transpose() * cw;
-    // grad = d_neg_lik + d_neg_prior;
     grad = d_neg_lik / cnst[i] + d_neg_prior / cnst[i];
     
     return f;

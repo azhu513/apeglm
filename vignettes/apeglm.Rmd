@@ -53,10 +53,11 @@ data(airway)
 head(assay(airway))
 ```
 
-For demonstration, we will just use the first 5000 genes of the `airway` dataset.
+For demonstration, we will use 5000 genes of the `airway` dataset,
+the first from those genes with at least 10 counts across all samples.
 
 ```{r}
-keep <- head(which(rowSums(assay(airway)) > 10), 5000)
+keep <- head(which(rowSums(assay(airway)) > 0), 5000)
 airway <- airway[keep,]
 ```
 
@@ -123,8 +124,9 @@ rbind(summary(abs(fit$map[,5] - fitR$map[,5])),
       summary(abs(fit$sd[,5] - fitR$sd[,5])))
 ```
 
-```{r eval=FALSE, echo=FALSE}
-#The version `nbinomCR` is ~8 times faster than the default `general`. 
+The version `nbinomCR` is ~10 times faster than the default `general`.
+
+```{r}
 system.time({
   fitCR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomCR")
@@ -133,11 +135,12 @@ rbind(summary(abs(fit$map[,5] - fitCR$map[,5])),
       summary(abs(fit$sd[,5] - fitCR$sd[,5])))
 ```
 
-```{r eval=FALSE, echo=FALSE}
-#The version `nbinomC` returns only the MAP coefficients and
-#can be more than 60 times faster than the default `general`. The MAP
-#coefficients are the same as returned by `nbinomCR` above, we just
-#skip the calculation of posterior SD.
+The version `nbinomC` returns only the MAP coefficients and
+can ~50-100 times faster than the default `general`. The MAP
+coefficients are the same as returned by `nbinomCR` above, we just
+skip the calculation of posterior SD.
+
+```{r}
 system.time({
   fitC <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomC")
@@ -159,7 +162,9 @@ convert to log2 scale by multiplying by `log2(exp(1))`. Note that
 scale internally.
 
 ```{r}
-res.shr <- lfcShrink(dds, coef=5)
+system.time({
+  res.shr <- lfcShrink(dds, coef=5)
+})
 DESeq2.lfc <- res.shr$log2FoldChange
 apeglm.lfc <- log2(exp(1)) * fit$map[,5]
 ```

@@ -32,7 +32,7 @@ gridResults <- function(y, x, log.lik,
   # check that unpo is monotonic on either side of map
   if (!all(diff(unpo[betas < map[coef]]) >= 0) 
       | !all(diff(unpo[betas > map[coef]]) <= 0)) {
-    out$diag <- c(o$convergence, o$counts[1], NA, NA)
+    out$diag <- c(o$convergence, o$counts[1], o$value, NA, NA)
     out$fsr <- NA
     out$ci <- c(NA, NA)
     if (!is.null(threshold)) {
@@ -161,7 +161,7 @@ gridResults <- function(y, x, log.lik,
   
   # diagnostic values including normalized tail area
   # to the left and right of the grid boundaries
-  out$diag <- c(o$convergence, o$counts[1], out.left, out.right)
+  out$diag <- c(o$convergence, o$counts[1], o$value, out.left, out.right)
   
   # calculate the false sign rate
   
