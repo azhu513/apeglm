@@ -342,14 +342,14 @@ apeglm <- function(Y, x, log.lik,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
                      no_shrink=no.shrink, shrink=shrink,
                      init=init, cnst=cnst)
-    valueR <- sapply(seq_len(sum(nonzero)), function(i) {
-      nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
-               offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
-               shrink=shrink, cnst=0)/cnst[i] + 10
-    })
-    nas <- rep(NA, nrow(result$diag))
-    result$diag <- cbind(result$diag, valueR=nas)
-    result$diag[nonzero,"valueR"] <- valueR
+    ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
+    ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+    ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+    ##            shrink=shrink, cnst=0)/cnst[i] + 10
+    ## })
+    ## nas <- rep(NA, nrow(result$diag))
+    ## result$diag <- cbind(result$diag, valueR=nas)
+    ## result$diag[nonzero,"valueR"] <- valueR
     result$map[nonzero,] <- t(out$betas)
     result$diag[nonzero,"conv"] <- out$convergence
     result$diag[nonzero,"value"] <- out$value
@@ -362,25 +362,15 @@ apeglm <- function(Y, x, log.lik,
     param.i <- if (is.null(param)) NULL else param[i,,drop=TRUE] # drop the dimension
     param.sd.i <- if (is.null(param.sd)) NULL else param.sd[i]
     prefit.beta <- if (method == "nbinomCR") result$map[i,] else NULL
+
     row.result <- apeglm.single(y = Y[i,], x=x, log.lik=log.lik, 
-                                param=param.i,
-                                coef=coef,
-                                interval.type=interval.type,
-                                interval.level=interval.level,
-                                threshold=threshold,
-                                contrasts=contrasts, 
-                                weights=weights.row, offset=offset.row,
-                                flip.sign=flip.sign,
-                                prior.control=prior.control,
-                                ngrid=ngrid, nsd=nsd,
-                                ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
-                                log.link=log.link,
-                                param.sd=param.sd.i,
-                                basemean=basemean[i],
-                                prefit.beta=prefit.beta,
-                                method=method,
-                                optim.method=optim.method,
-                                bounds=bounds)
+      param=param.i, coef=coef, interval.type=interval.type, interval.level=interval.level,
+      threshold=threshold, contrasts=contrasts, weights=weights.row, offset=offset.row,
+      flip.sign=flip.sign, prior.control=prior.control,
+      ngrid=ngrid, nsd=nsd, ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
+      log.link=log.link, param.sd=param.sd.i, basemean=basemean[i], prefit.beta=prefit.beta,
+      method=method, optim.method=optim.method, bounds=bounds)
+    
     result$map[i,] <- row.result$map
     result$sd[i,] <- row.result$sd
     if (!is.null(coef)) {
@@ -446,24 +436,10 @@ log.post <- function(beta, log.lik, log.prior, y, x, param, weights,
 
 # For each row, we use this apeglm.single
 # (unexported)
-apeglm.single <- function(y, x, log.lik, 
-                          param,
-                          coef,
-                          interval.type,
-                          interval.level,
-                          threshold, contrasts,
-                          weights, offset,
-                          flip.sign,
-                          prior.control,
-                          ngrid, nsd,
-                          ngrid.nuis, nsd.nuis,
-                          log.link=TRUE,
-                          param.sd,
-                          basemean,
-                          prefit.beta,
-                          method,
-                          optim.method,
-                          bounds) {
+apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.level,
+                          threshold, contrasts, weights, offset, flip.sign, prior.control,
+                          ngrid, nsd, ngrid.nuis, nsd.nuis, log.link=TRUE, param.sd,
+                          basemean, prefit.beta, method, optim.method, bounds) {
 
   if (log.link & all(y == 0)) {
     out <- buildNAOut(coef, interval.type, threshold, contrasts)

@@ -120,8 +120,6 @@ system.time({
   fitR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomR")
 })
-rbind(summary(abs(fit$map[,5] - fitR$map[,5])),
-      summary(abs(fit$sd[,5] - fitR$sd[,5])))
 ```
 
 The version `nbinomCR` is ~10 times faster than the default `general`.
@@ -131,8 +129,6 @@ system.time({
   fitCR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
                  threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomCR")
 })
-rbind(summary(abs(fit$map[,5] - fitCR$map[,5])),
-      summary(abs(fit$sd[,5] - fitCR$sd[,5])))
 ```
 
 The version `nbinomC` returns only the MAP coefficients and
