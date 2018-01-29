@@ -75,13 +75,18 @@
 #' in a general way. Alternatives for faster performance with the Negative Binomial
 #' likelihood are:
 #' "nbinomR", "nbinomCR", and "nbinomC".
-#' These alternative methods should provide increasing benefits respectively in terms of speed.
-#' Note that "nbinomC" only returns the MAP for the coefficients,
-#' without calculating, e.g. posterior SD or other quantities.
-#' These require the prior degrees of freedom for the distribution to be 1,
+#' These alternative methods should provide increasing speeds, respectively.
+#' From testing on RNA-seq data, they are roughly 5x, 10x and 50-100x faster than "general".
+#' Note that "nbinomC" uses C++ to find the MAP for the coefficients,
+#' but does not calculate or return the posterior SD or other quantities.
+#' "nbinomCR" uses C++ to calculate the MAP and then estimates
+#' the posterior SD in R, with the exception that if the MAP from C++
+#' gives negative estimates of posterior variance, then this row is refit
+#' using optimization in R.
+#' These alternatives require the degrees of freedom for the prior distribution to be 1,
 #' and will ignore any function provided to the \code{log.lik} argument.
-#' \code{param} should specify the dispersion parameter (such that Var = mu + param mu^2).
-#' 
+#' \code{param} should specify the dispersion parameter of a Negative Binomial
+#' (such that Var = mu + param mu^2).
 #' @param optim.method the method passed to \code{optim}
 #' @param bounds the bounds for the numeric optimization 
 #'  
@@ -330,6 +335,7 @@ apeglm <- function(Y, x, log.lik,
     S <- prior.control$prior.scale
     no.shrink <- prior.control$no.shrink
     shrink <- setdiff(seq_len(ncol(x)), no.shrink)
+    # now, estimate the scale of the function
     init <- rep(0, ncol(x))
     cnst <- sapply(seq_len(sum(nonzero)), function(i) {
       nbinomFn(init, x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
@@ -337,6 +343,8 @@ apeglm <- function(Y, x, log.lik,
                shrink=shrink, cnst=0)
     })
     cnst <- ifelse(cnst > 1, cnst, 1)
+    # now optimize over all rows using L-BFGS run in C++
+    # on a scaled version of the negative posterior
     init <- rep(c(1,-1),length.out=ncol(x))
     out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
@@ -347,8 +355,7 @@ apeglm <- function(Y, x, log.lik,
     ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
     ##            shrink=shrink, cnst=0)/cnst[i] + 10
     ## })
-    ## nas <- rep(NA, nrow(result$diag))
-    ## result$diag <- cbind(result$diag, valueR=nas)
+    ## nas <- rep(NA, nrow(result$diag)); result$diag <- cbind(result$diag, valueR=nas)
     ## result$diag[nonzero,"valueR"] <- valueR
     result$map[nonzero,] <- t(out$betas)
     result$diag[nonzero,"conv"] <- out$convergence
@@ -474,32 +481,33 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
                lower=bounds[1], upper=bounds[2],
                hessian=TRUE, method=optim.method)
   } else if (method == "nbinomR") {
+    # this optimizes all rows in R, with function and gradient
+    # written specifically for negative binomial likelihood
     o <- optimNbinom(init=init, y=y, x=x, param=param,
                      weights=weights, offset=offset,
                      prior.control=prior.control,
                      bounds=bounds,
                      optim.method=optim.method)
   } else if (method == "nbinomCR") {
-    o <- list()
-    o$par <- init
-    o$hessian <- optimNbinomHess(init=init, y=y, x=x, param=param,
-                                 weights=weights, offset=offset,
-                                 prior.control=prior.control)
-    o$convergence <- NA
-    o$counts <- NA
-    o$value <- NA
+    # this uses previously estimated C++ MAP for negative binomial likelihood
+    # and calculates the Hessian uses optimHess().
+    # if the Hessian gives negative variance estimates for a row, it will
+    # re-optimize the negative log posterior using method="nbinomR" for that row
+    o <- optimNbinomHess(init=init, y=y, x=x, param=param,
+                         weights=weights, offset=offset,
+                         prior.control=prior.control)
   }
   
   map <- o$par
-  sigma <- -solve(o$hessian)
+  cov.mat <- -solve(o$hessian)
 
-  if (any(diag(sigma) <= 0)) {
+  if (any(diag(cov.mat) <= 0)) {
     out <- buildNAOut(coef, interval.type, threshold, contrasts)
     out$map <- map
     return(out)
   }
 
-  sd <- sqrt(diag(sigma))
+  sd <- sqrt(diag(cov.mat))
 
   out <- list(map=map, sd=sd)
   # calculate statistics for a particular coefficient
@@ -532,7 +540,7 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
                          ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
                          log.link=log.link,
                          param.sd=param.sd,
-                         o=o, map=map, sigma=sigma, sd=sd, out=out)
+                         o=o, map=map, cov.mat=cov.mat, sd=sd, out=out)
     }
   } else {
     # just diagnostic values (if coef not specified)
@@ -545,7 +553,7 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
     stopifnot(nrow(contrasts) == ncol(x))
     stopifnot(ncol(contrasts) >= 1)
     out$contrast.map <- map %*% contrasts
-    out$contrast.sd <- t(sqrt(diag(t(contrasts) %*% sigma %*% contrasts)))
+    out$contrast.sd <- t(sqrt(diag(t(contrasts) %*% cov.mat %*% contrasts)))
   }
   
   out

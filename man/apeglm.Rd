@@ -86,12 +86,18 @@ The default is "general" which allows the user to specify a likelihood
 in a general way. Alternatives for faster performance with the Negative Binomial
 likelihood are:
 "nbinomR", "nbinomCR", and "nbinomC".
-These alternative methods should provide increasing benefits respectively in terms of speed.
-Note that "nbinomC" only returns the MAP for the coefficients,
-without calculating, e.g. posterior SD or other quantities.
-These require the prior degrees of freedom for the distribution to be 1,
+These alternative methods should provide increasing speeds, respectively.
+From testing on RNA-seq data, they are roughly 5x, 10x and 50-100x faster than "general".
+Note that "nbinomC" uses C++ to find the MAP for the coefficients,
+but does not calculate or return the posterior SD or other quantities.
+"nbinomCR" uses C++ to calculate the MAP and then estimates
+the posterior SD in R, with the exception that if the MAP from C++
+gives negative estimates of posterior variance, then this row is refit
+using optimization in R.
+These alternatives require the degrees of freedom for the prior distribution to be 1,
 and will ignore any function provided to the \code{log.lik} argument.
-\code{param} should specify the dispersion parameter (such that Var = mu + param mu^2).}
+\code{param} should specify the dispersion parameter of a Negative Binomial
+(such that Var = mu + param mu^2).}
 
 \item{optim.method}{the method passed to \code{optim}}
 

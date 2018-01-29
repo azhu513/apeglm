@@ -11,9 +11,9 @@ gridResults <- function(y, x, log.lik,
                         ngrid.nuis, nsd.nuis,
                         log.link,
                         param.sd,
-                        o, map, sigma, sd, out) {
+                        o, map, cov.mat, sd, out) {
 
-  corr.sigma <- sigma / outer(sd, sd)
+  cor.mat <- cov.mat / outer(sd, sd)
   
   # evaluate the unnormalized posterior for 'coef' over a grid 
   beta.min <- map[coef] - nsd*sd[coef]
@@ -22,7 +22,7 @@ gridResults <- function(y, x, log.lik,
   betas <- seq(beta.min, beta.max, length.out=(ngrid + 1))
 
   # we integrate the unnormalized posterior over the other coefficients than 'coef'
-  unpo <- integrateOther(corr.sigma=corr.sigma, coef=coef, betas=betas, map=map, sd=sd,
+  unpo <- integrateOther(cor.mat=cor.mat, coef=coef, betas=betas, map=map, sd=sd,
                          log.lik = log.lik, log.prior = log.prior, 
                          y = y, x = x, param = param, param.sd = param.sd,
                          prior.control = prior.control, 
@@ -295,7 +295,7 @@ solve.x <- function(y, x, remn.area) {
 }
 
 
-integrateOther <- function(corr.sigma, coef, betas, map, sd,
+integrateOther <- function(cor.mat, coef, betas, map, sd,
                            log.lik, log.prior, 
                            y, x, param, param.sd,
                            prior.control, 
@@ -326,7 +326,7 @@ integrateOther <- function(corr.sigma, coef, betas, map, sd,
 
   ### old code using dmvnorm() to trim the number of grid evaluations ###
   ## if (nnuis > 1) {
-  ##   nuis.probs <- dmvnorm(nuis.grid, rep(0,nnuis), corr.sigma[-coef,-coef])
+  ##   nuis.probs <- dmvnorm(nuis.grid, rep(0,nnuis), cor.mat[-coef,-coef])
   ##   nuis.probs <- nuis.probs/sum(nuis.probs)
   ##   # only evaluate on the grid points larger than this cutoff
   ##   nuis.cutoff <- 1/nrow(nuis.grid)

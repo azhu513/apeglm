@@ -54,9 +54,22 @@ optimNbinomHess <- function(init, y, x, param, weights, offset, prior.control,
   sigma <- prior.control$prior.no.shrink.scale
   S <- prior.control$prior.scale
   cnst <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
-  -1 * optimHess(par=init, fn=nbinomFn, gr=nbinomGr,
-                 x=x, y=y, size=size,
-                 weights=weights, offset=offset,
-                 sigma=sigma, S=S, no.shrink=no.shrink,
-                 shrink=shrink, cnst=cnst)
+  o <- list()
+  o$par <- init
+  o$hessian <- -1 * optimHess(par=init, fn=nbinomFn, gr=nbinomGr,
+                              x=x, y=y, size=size,
+                              weights=weights, offset=offset,
+                              sigma=sigma, S=S, no.shrink=no.shrink,
+                              shrink=shrink, cnst=cnst)
+  o$convergence <- NA
+  o$counts <- NA
+  o$value <- NA
+  var.est <- diag(-solve(o$hessian))
+  if (any(var.est <= 0)) {
+    o <- optimNbinom(init=init, y=y, x=x, param=param,
+                     weights=weights, offset=offset,
+                     prior.control=prior.control,
+                     bounds=bounds, optim.method=optim.method)
+  }
+  o
 }
