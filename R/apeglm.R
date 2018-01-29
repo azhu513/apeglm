@@ -495,7 +495,9 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
     # re-optimize the negative log posterior using method="nbinomR" for that row
     o <- optimNbinomHess(init=init, y=y, x=x, param=param,
                          weights=weights, offset=offset,
-                         prior.control=prior.control)
+                         prior.control=prior.control,
+                         bounds=bounds,
+                         optim.method=optim.method)
   }
   
   map <- o$par
