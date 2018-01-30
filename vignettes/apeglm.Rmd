@@ -132,9 +132,10 @@ system.time({
 ```
 
 The version `nbinomC` returns only the MAP coefficients and
-can ~50-100 times faster than the default `general`. The MAP
+can be ~50-100 times faster than the default `general`. The MAP
 coefficients are the same as returned by `nbinomCR` above, we just
-skip the calculation of posterior SD.
+skip the calculation of posterior SD. A variant of `nbinomC` is
+`nbinomC*` which includes random starts.
 
 ```{r}
 system.time({

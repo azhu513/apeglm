@@ -9,8 +9,8 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
   offset = NULL, flip.sign = TRUE, prior.control, multiplier = 1,
   ngrid = 50, nsd = 5, ngrid.nuis = 5, nsd.nuis = 2, log.link = TRUE,
-  param.sd = NULL, method = c("general", "nbinomR", "nbinomCR", "nbinomC"),
-  optim.method = "BFGS", bounds = c(-Inf, Inf))
+  param.sd = NULL, method = c("general", "nbinomR", "nbinomCR", "nbinomC",
+  "nbinomC*"), optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
 \item{Y}{the observations, which can be a matrix or SummarizedExperiment,
@@ -85,15 +85,16 @@ this should only be a vector, used when \code{param} specifies a single paramete
 The default is "general" which allows the user to specify a likelihood
 in a general way. Alternatives for faster performance with the Negative Binomial
 likelihood are:
-"nbinomR", "nbinomCR", and "nbinomC".
+"nbinomR", "nbinomCR", and "nbinomC" / "nbinomC*"
 These alternative methods should provide increasing speeds, respectively.
-From testing on RNA-seq data, they are roughly 5x, 10x and 50-100x faster than "general".
+From testing on RNA-seq data, they are roughly 5x, 10x and 50x faster than "general".
 Note that "nbinomC" uses C++ to find the MAP for the coefficients,
 but does not calculate or return the posterior SD or other quantities.
+"nbinomC*" is the same as "nbinomC", but includes a random start for finding the MAP.
 "nbinomCR" uses C++ to calculate the MAP and then estimates
 the posterior SD in R, with the exception that if the MAP from C++
-gives negative estimates of posterior variance, then this row is refit
-using optimization in R.
+did not converge or gives negative estimates of posterior variance,
+then this row is refit using optimization in R.
 These alternatives require the degrees of freedom for the prior distribution to be 1,
 and will ignore any function provided to the \code{log.lik} argument.
 \code{param} should specify the dispersion parameter of a Negative Binomial

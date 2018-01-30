@@ -74,15 +74,16 @@
 #' The default is "general" which allows the user to specify a likelihood
 #' in a general way. Alternatives for faster performance with the Negative Binomial
 #' likelihood are:
-#' "nbinomR", "nbinomCR", and "nbinomC".
+#' "nbinomR", "nbinomCR", and "nbinomC" / "nbinomC*"
 #' These alternative methods should provide increasing speeds, respectively.
-#' From testing on RNA-seq data, they are roughly 5x, 10x and 50-100x faster than "general".
+#' From testing on RNA-seq data, they are roughly 5x, 10x and 50x faster than "general".
 #' Note that "nbinomC" uses C++ to find the MAP for the coefficients,
 #' but does not calculate or return the posterior SD or other quantities.
+#' "nbinomC*" is the same as "nbinomC", but includes a random start for finding the MAP.
 #' "nbinomCR" uses C++ to calculate the MAP and then estimates
 #' the posterior SD in R, with the exception that if the MAP from C++
-#' gives negative estimates of posterior variance, then this row is refit
-#' using optimization in R.
+#' did not converge or gives negative estimates of posterior variance,
+#' then this row is refit using optimization in R.
 #' These alternatives require the degrees of freedom for the prior distribution to be 1,
 #' and will ignore any function provided to the \code{log.lik} argument.
 #' \code{param} should specify the dispersion parameter of a Negative Binomial
@@ -187,7 +188,7 @@ apeglm <- function(Y, x, log.lik,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
-                   method=c("general","nbinomR","nbinomCR","nbinomC"),
+                   method=c("general","nbinomR","nbinomCR","nbinomC","nbinomC*"),
                    optim.method="BFGS",
                    bounds=c(-Inf,Inf)) {
 
@@ -318,7 +319,7 @@ apeglm <- function(Y, x, log.lik,
   }
 
   # TODO eventually, break this out in sub-function
-  if (method %in% c("nbinomC","nbinomCR")) {
+  if (method %in% c("nbinomCR","nbinomC","nbinomC*")) {
     nonzero <- rowSums(Y) > 0
     # the C++ code uses transposed data (samples x genes)
     YNZ <- t(Y[nonzero,,drop=FALSE])
@@ -344,12 +345,24 @@ apeglm <- function(Y, x, log.lik,
     })
     cnst <- ifelse(cnst > 1, cnst, 1)
     # now optimize over all rows using L-BFGS run in C++
-    # on a scaled version of the negative posterior
-    init <- rep(c(1,-1),length.out=ncol(x))
+    # on a scaled version of the negative posterior.
+    # we run it twice to check for stability and issues w/ local maxima
+    if (method == "nbinomC*") {
+      init <- rnorm(ncol(x),0,.5)
+    } else {
+      init <- rep(c(.1,-.1),length.out=ncol(x))
+    }
     out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
                      no_shrink=no.shrink, shrink=shrink,
                      init=init, cnst=cnst)
+    if (method == "nbinomCR") {
+      init2 <- rep(c(-.1,.1),length.out=ncol(x))
+      out2 <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
+                        offset=offsetNZ, sigma2=sigma^2, S2=S^2,
+                        no_shrink=no.shrink, shrink=shrink,
+                        init=init2, cnst=cnst)
+    }
     ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
     ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
     ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
@@ -360,7 +373,14 @@ apeglm <- function(Y, x, log.lik,
     result$map[nonzero,] <- t(out$betas)
     result$diag[nonzero,"conv"] <- out$convergence
     result$diag[nonzero,"value"] <- out$value
-    if (method=="nbinomC") return(result)
+    if (method == "nbinomCR") {
+      # if the two fits above disagree by .01, say it did not converge
+      delta <- apply(abs(out$betas - out2$betas), 2, max)
+      result$diag[nonzero,"conv"][delta > .01] <- -1
+    } else {
+      # nbinomC or nbinomC* just return the result
+      return(result)
+    }
   }
   
   for (i in seq_len(nrows)) {
@@ -369,13 +389,15 @@ apeglm <- function(Y, x, log.lik,
     param.i <- if (is.null(param)) NULL else param[i,,drop=TRUE] # drop the dimension
     param.sd.i <- if (is.null(param.sd)) NULL else param.sd[i]
     prefit.beta <- if (method == "nbinomCR") result$map[i,] else NULL
+    prefit.conv <- if (method == "nbinomCR") result$diag[i,"conv"] else NULL
 
     row.result <- apeglm.single(y = Y[i,], x=x, log.lik=log.lik, 
       param=param.i, coef=coef, interval.type=interval.type, interval.level=interval.level,
       threshold=threshold, contrasts=contrasts, weights=weights.row, offset=offset.row,
       flip.sign=flip.sign, prior.control=prior.control,
       ngrid=ngrid, nsd=nsd, ngrid.nuis=ngrid.nuis, nsd.nuis=nsd.nuis,
-      log.link=log.link, param.sd=param.sd.i, basemean=basemean[i], prefit.beta=prefit.beta,
+      log.link=log.link, param.sd=param.sd.i, basemean=basemean[i],
+      prefit.beta=prefit.beta, prefit.conv=prefit.conv,
       method=method, optim.method=optim.method, bounds=bounds)
     
     result$map[i,] <- row.result$map
@@ -391,11 +413,8 @@ apeglm <- function(Y, x, log.lik,
         }
       }
     }
-    # if using "nbinomCR", then the optimization was already performed above,
-    # and the diagnostic information already recorded...
-    if (!method == "nbinomCR") {
-      result$diag[i,] <- row.result$diag
-    }
+    result$diag[i,] <- row.result$diag
+
     if (!missing(contrasts)) { 
       result$contrast.map[i,] <- row.result$contrast.map
       result$contrast.sd[i,] <- row.result$contrast.sd
@@ -446,7 +465,7 @@ log.post <- function(beta, log.lik, log.prior, y, x, param, weights,
 apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.level,
                           threshold, contrasts, weights, offset, flip.sign, prior.control,
                           ngrid, nsd, ngrid.nuis, nsd.nuis, log.link=TRUE, param.sd,
-                          basemean, prefit.beta, method, optim.method, bounds) {
+                          basemean, prefit.beta, prefit.conv, method, optim.method, bounds) {
 
   if (log.link & all(y == 0)) {
     out <- buildNAOut(coef, interval.type, threshold, contrasts)
@@ -497,7 +516,8 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
                          weights=weights, offset=offset,
                          prior.control=prior.control,
                          bounds=bounds,
-                         optim.method=optim.method)
+                         optim.method=optim.method,
+                         prefit.conv=prefit.conv)
   }
   
   map <- o$par
@@ -514,6 +534,7 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
   out <- list(map=map, sd=sd)
   # calculate statistics for a particular coefficient
   if (!is.null(coef)) {
+    # this is the default interval type - Laplace approximation of posterior
     if (interval.type == "laplace") {
       stopifnot(is.null(param.sd)) # not implemented
       qn <- qnorm((1 - interval.level)/2,lower.tail=FALSE)

@@ -41,7 +41,7 @@ optimNbinom <- function(init, y, x, param, weights, offset, prior.control,
 }
 
 optimNbinomHess <- function(init, y, x, param, weights, offset, prior.control,
-                            bounds, optim.method) {
+                            bounds, optim.method, prefit.conv) {
   if (is.null(weights)) {
     weights <- 1
   }
@@ -56,20 +56,26 @@ optimNbinomHess <- function(init, y, x, param, weights, offset, prior.control,
   cnst <- -nbinomFn(init, x, y, size, weights, offset, sigma, S, no.shrink, shrink, 0) - 1
   o <- list()
   o$par <- init
-  o$hessian <- -1 * optimHess(par=init, fn=nbinomFn, gr=nbinomGr,
-                              x=x, y=y, size=size,
-                              weights=weights, offset=offset,
-                              sigma=sigma, S=S, no.shrink=no.shrink,
-                              shrink=shrink, cnst=cnst)
-  o$convergence <- NA
+  if (prefit.conv == 0) {
+    o$hessian <- -1 * optimHess(par=init, fn=nbinomFn, gr=nbinomGr,
+                                x=x, y=y, size=size,
+                                weights=weights, offset=offset,
+                                sigma=sigma, S=S, no.shrink=no.shrink,
+                                shrink=shrink, cnst=cnst)
+    var.est <- diag(-solve(o$hessian))
+  }
+  # rows that did not converge in C++ will get another try below
+  o$convergence <- 0
   o$counts <- NA
-  o$value <- NA
-  var.est <- diag(-solve(o$hessian))
-  if (any(var.est <= 0)) {
+  # if the C++ fit did not converge, or we have negative variance estimates
+  # run the optimization in R
+  if (prefit.conv != 0 || any(var.est <= 0)) {
     o <- optimNbinom(init=init, y=y, x=x, param=param,
                      weights=weights, offset=offset,
                      prior.control=prior.control,
                      bounds=bounds, optim.method=optim.method)
   }
+  # don't want to mix C++ and R log posterior values, which have diff scale
+  o$value <- NA
   o
 }

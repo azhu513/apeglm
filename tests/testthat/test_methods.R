@@ -48,6 +48,13 @@ test_that("alternative methods give same result", {
   expect_equal(fit$map[,coef], fitC$map[,coef], tolerance=1e-3)
   #expect_equal(fitC$diag[,"value"], fitC$diag[,"valueR"], tolerance=1e-3)
 
+  # C++ with random start
+  system.time({
+    fitCrand <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=coef,
+                   method="nbinomC*")
+  })
+  expect_equal(fit$map[,coef], fitCrand$map[,coef], tolerance=1e-3)
+  
   # C++ to fit the MAP, then estimate posterior SD in R
   system.time({
     fitCR <- apeglm(Y=Y, x=x, log.lik=NULL, offset=offset, param=param, coef=coef,
@@ -95,7 +102,8 @@ test_that("refitting rows in R when posterior SD from C++ is NA", {
     o <- apeglm:::optimNbinomHess(init=c(-5,-5), y=Y[i,], x=x, param=param[i],
                                   weights=NULL, offset=offset[i,],
                                   prior.control=prior.control,
-                                  bounds=c(-Inf,Inf), optim.method="BFGS")
+                                  bounds=c(-Inf,Inf), optim.method="BFGS",
+                                  prefit.conv=0)
     cov.mat <- -solve(o$hessian)
     diag(cov.mat)
   })
