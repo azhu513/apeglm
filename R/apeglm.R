@@ -117,7 +117,7 @@
 #' @importFrom Rcpp sourceCpp
 #' @importFrom SummarizedExperiment assay rowRanges
 #' @importFrom GenomicRanges mcols<-
-#' @importFrom stats dnorm pnorm qnorm sd dt optim optimHess uniroot
+#' @importFrom stats dnorm pnorm qnorm rnorm sd dt optim optimHess uniroot
 #' @importFrom utils head tail
 #' @importFrom methods is
 #'
