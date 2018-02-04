@@ -110,7 +110,7 @@ Rcpp::List nbinomGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
 
   double fopt;
   for (int i = 0; i < G; i++) {
-    if (i % 256 == 0) Rcpp::checkUserInterrupt();
+    if (i % 100 == 0) Rcpp::checkUserInterrupt();
     optimFun nll(mx, mY, msize, mweights, moffset, sigma2, S2, mno_shrink, mshrink, mcnst, i);
     beta = minit;
     int status = optim_lbfgs(nll, beta, fopt, 300, 1e-8, 1e-8);
