@@ -78,7 +78,6 @@ test_that("alternative methods give same result", {
 
 })
 
-context("methods")
 test_that("refitting rows in R when posterior SD from C++ is NA", {
 
   set.seed(1)
