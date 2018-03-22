@@ -202,3 +202,8 @@ plot(beta.mat[,2], res$map[,2])
 abline(0,1)
 
 }
+\references{
+False sign rate and s-value:
+
+Stephens, M. (2016) False discovery rates: a new deal. Biostatistics, 18:2. doi: 10.1093/biostatistics/kxw041
+}

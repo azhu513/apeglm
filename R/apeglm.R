@@ -114,6 +114,12 @@
 #' Note that all parameters associated with coefficients,
 #' e.g. \code{map}, \code{sd}, etc., are returned on the natural log scale for a log link GLM.
 #'
+#' @references
+#'
+#' False sign rate and s-value:
+#'
+#' Stephens, M. (2016) False discovery rates: a new deal. Biostatistics, 18:2. doi: 10.1093/biostatistics/kxw041
+#' 
 #' @importFrom Rcpp sourceCpp
 #' @importFrom SummarizedExperiment assay rowRanges
 #' @importFrom GenomicRanges mcols<-
