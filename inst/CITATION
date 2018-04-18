@@ -1,0 +1,12 @@
+citEntry(entry="article",
+         title = "Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences",
+         author = personList( as.person("Anqi Zhu"),
+                              as.person("Joseph G. Ibrahim"),
+                              as.person("Michael I. Love")),
+         year = 2018,
+         journal = "bioRxiv",
+         doi = "10.1101/303255",
+         textVersion =
+         paste("Zhu, A., Ibrahim, J.G., Love, M.I.",
+               "Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences",
+                "bioRxiv (2018)" ) )

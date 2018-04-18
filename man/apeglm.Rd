@@ -203,6 +203,11 @@ abline(0,1)
 
 }
 \references{
+Adaptive Cauchy prior:
+
+Zhu, A. (2018) Heavy-tailed prior distributions for sequence count data:
+removing the noise and preserving large differences. bioRxiv. doi: 10.1101/303255
+
 False sign rate and s-value:
 
 Stephens, M. (2016) False discovery rates: a new deal. Biostatistics, 18:2. doi: 10.1093/biostatistics/kxw041
