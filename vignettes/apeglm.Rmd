@@ -246,6 +246,20 @@ plot(res$baseMean, log2(exp(1)) * fit$map[,5], log="x", col=cols,
 abline(h=c(-1,0,1), col=rgb(1,0,0,.5), lwd=2)
 ```
 
+# Modeling zero-inflated counts
+
+We have created a separate GitHub repository giving an example of how
+the *apeglm* estimator can be used for Zero-Inflated Negative Binomial
+data. This approach uses the *zinbwave* method and Bioconductor
+package to estimate the probability of each zero belonging to the
+excess zero component. We compare using a Negative Binomial likelihood
+with the excess zeros down-weighted and using a Zero Inflated Negative
+Binomial likelihood. These two approaches with *apeglm* perform
+similarly but we note that the first approach involves less additional
+code and is faster to compute.
+
+<https://github.com/mikelove/zinbwave-apeglm>
+
 # Modeling ratios of counts 
 
 We also show an short example using an alternative likelihood
