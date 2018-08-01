@@ -282,7 +282,11 @@ apeglm <- function(Y, x, log.lik,
   }
   
   intercept.idx <- rowSums(x == 0) == nvars - 1
-  basemean <- rowMeans(Y[,intercept.idx,drop=FALSE])
+  if (sum(intercept.idx) > 0) {
+    basemean <- rowMeans(Y[,intercept.idx,drop=FALSE])
+  } else {
+    basemean <- rowMeans(Y)
+  }
   
   result <- list()
   result$map <- matrix(nrow=nrows, ncol=nvars,
