@@ -4,9 +4,9 @@ citEntry(entry="article",
                               as.person("Joseph G. Ibrahim"),
                               as.person("Michael I. Love")),
          year = 2018,
-         journal = "bioRxiv",
-         doi = "10.1101/303255",
+         journal = "Bioinformatics",
+         doi = "10.1093/bioinformatics/bty895",
          textVersion =
          paste("Zhu, A., Ibrahim, J.G., Love, M.I.",
                "Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences",
-                "bioRxiv (2018)" ) )
+                "Bioinformatics (2018)" ) )

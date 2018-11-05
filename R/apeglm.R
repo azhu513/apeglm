@@ -119,7 +119,7 @@
 #' Adaptive Cauchy prior:
 #'
 #' Zhu, A. (2018) Heavy-tailed prior distributions for sequence count data:
-#' removing the noise and preserving large differences. bioRxiv. doi: 10.1101/303255
+#' removing the noise and preserving large differences. Bioinformatics. doi: 10.1093/bioinformatics/bty895
 #' 
 #' False sign rate and s-value:
 #'
