@@ -9,6 +9,7 @@
 #'
 #' @param success the observed successes (a matrix)
 #' @param size the total trials (a matrix)
+#' @param weights the weights (1 or a matrix)
 #' @param x the design matrix, as many rows as columns of \code{success} and \code{size}
 #' @param beta a matrix of MLE coefficients, as many rows as \code{success} and \code{size}
 #' @param minDisp the minimum dispersion value
@@ -32,18 +33,23 @@
 #' @importFrom emdbook dbetabinom
 #' 
 #' @export
-bbEstDisp <- function(success, size, x, beta, minDisp, maxDisp) {
+bbEstDisp <- function(success, size, weights=1, x, beta, minDisp, maxDisp) {
   stopifnot(ncol(success) == nrow(x))
   stopifnot(nrow(success) == nrow(beta))
   stopifnot(ncol(x) == ncol(beta))
+  stopifnot(all(weights >= 0))
   xbeta <- t(x %*% t(beta))
   p.hat <- (1+exp(-xbeta))^-1
   theta.hat <- numeric(nrow(success))
   minld <- log(minDisp)
   maxld <- log(maxDisp)
   for (i in seq_len(nrow(success))) {
-    f <- function(logtheta,i) sum(dbetabinom(success[i,], p.hat[i,], size=size[i,],
-                                             theta=exp(logtheta), log=TRUE))
+    f <- function(logtheta,i) sum(weights *
+                                  dbetabinom(success[i,],
+                                             prob=p.hat[i,],
+                                             size=size[i,],
+                                             theta=exp(logtheta),
+                                             log=TRUE))
     o <- optimize(f, interval=c(minld,maxld), i=i, maximum=TRUE)
     theta.hat[i] <- exp(o$maximum)
   }

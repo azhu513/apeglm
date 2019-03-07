@@ -1,6 +1,6 @@
 Package: apeglm
 Title: Approximate posterior estimation for GLM coefficients
-Version: 1.5.2
+Version: 1.5.3
 Author: Anqi Zhu, Joseph G. Ibrahim, Michael I. Love
 Maintainer: Anqi Zhu <anqizhu@live.unc.edu>
 Description: apeglm provides Bayesian shrinkage estimators for effect sizes for a variety of GLM models, using approximation of the posterior for individual coefficients.
@@ -12,4 +12,4 @@ License: GPL-2
 Encoding: UTF-8
 LazyData: true
 biocViews: ImmunoOncology, Sequencing, RNASeq, DifferentialExpression, GeneExpression, Bayesian
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

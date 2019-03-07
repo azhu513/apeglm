@@ -4,12 +4,14 @@
 \alias{bbEstDisp}
 \title{Simple line-search estimator for dispersion of a beta binomial}
 \usage{
-bbEstDisp(success, size, x, beta, minDisp, maxDisp)
+bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp)
 }
 \arguments{
 \item{success}{the observed successes (a matrix)}
 
 \item{size}{the total trials (a matrix)}
+
+\item{weights}{the weights (1 or a matrix)}
 
 \item{x}{the design matrix, as many rows as columns of \code{success} and \code{size}}
 
