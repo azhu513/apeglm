@@ -36,6 +36,11 @@ test_that("example on beta-binomial", {
                          x=x, beta=fit.mle$map,
                          minDisp=1, maxDisp=500)
 
+  # we can also ask for standard errors for log of dispersion
+  theta.fit <- bbEstDisp(success=ase.cts, size=cts,
+                         x=x, beta=fit.mle$map,
+                         minDisp=1, maxDisp=500, se=TRUE)
+
   #plot(beta.cond, fit.mle$map[,2])
   #plot(theta, theta.hat)
   

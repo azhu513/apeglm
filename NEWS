@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.5.4
+------------------------
+
+    o Added possibility for weights and standard errors to bbEstDisp().
+      The standard errors are for the log of dispersion (theta).
+
 CHANGES IN VERSION 1.3.2
 ------------------------
 

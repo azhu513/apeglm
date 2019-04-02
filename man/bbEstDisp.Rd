@@ -4,7 +4,8 @@
 \alias{bbEstDisp}
 \title{Simple line-search estimator for dispersion of a beta binomial}
 \usage{
-bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp)
+bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp,
+  se = FALSE)
 }
 \arguments{
 \item{success}{the observed successes (a matrix)}
@@ -20,9 +21,14 @@ bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp)
 \item{minDisp}{the minimum dispersion value}
 
 \item{maxDisp}{the maximum dispersion value}
+
+\item{se}{logical, whether to return standard error estimate on the log of
+the dispersion (theta)}
 }
 \value{
-a vector of estimated dispersions
+a vector of estimated dispersions (theta). if \code{se=TRUE} a matrix
+with columns: the vector of estimated dispersions and the standard
+errors for the log of the estimated dispersions
 }
 \description{
 Uses R's \code{optimize} function to find the maximum likelihood
@@ -41,7 +47,17 @@ size <- matrix(rnbinom(n*m, mu=100, size=10),ncol=m)
 success <- matrix(rbetabinom(n*m, prob=.5, size=size, theta=100),ncol=m)
 x <- matrix(rep(1,m),ncol=1)
 beta <- matrix(rep(0,n),ncol=1)
-theta <- bbEstDisp(success, size, x, beta, 1, 500)
+theta <- bbEstDisp(success=success, size=size, x=x, beta=beta, minDisp=1, maxDisp=500)
 summary(theta)
+
+# with standard error estimates on log of dispersion
+fit <- bbEstDisp(success=success, size=size, x=x, beta=beta, minDisp=1, maxDisp=500, se=TRUE)
+plot(fit[1:20,"theta"], ylim=c(0,500), ylab="theta-hat")
+log.theta <- log(fit[1:20,"theta"])
+log.theta.se <- fit[1:20,"se"]
+segments(1:20, exp(log.theta - 2 * log.theta.se),
+         1:20, exp(log.theta + 2 * log.theta.se))
+abline(h=100,col="red")
+
 
 }
