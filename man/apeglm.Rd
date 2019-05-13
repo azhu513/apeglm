@@ -10,8 +10,8 @@ apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
   offset = NULL, flip.sign = TRUE, prior.control, multiplier = 1,
   ngrid = 50, nsd = 5, ngrid.nuis = 5, nsd.nuis = 2,
   log.link = TRUE, param.sd = NULL, method = c("general", "nbinomR",
-  "nbinomCR", "nbinomC", "nbinomC*"), optim.method = "BFGS",
-  bounds = c(-Inf, Inf))
+  "nbinomCR", "nbinomC", "nbinomC*", "betabinR", "betabinCR", "betabinC",
+  "betabinC*"), optim.method = "BFGS", bounds = c(-Inf, Inf))
 }
 \arguments{
 \item{Y}{the observations, which can be a matrix or SummarizedExperiment,
@@ -87,8 +87,11 @@ The default is "general" which allows the user to specify a likelihood
 in a general way. Alternatives for faster performance with the Negative Binomial
 likelihood are:
 "nbinomR", "nbinomCR", and "nbinomC" / "nbinomC*"
-These alternative methods should provide increasing speeds, respectively.
-From testing on RNA-seq data, they are roughly 5x, 10x and 50x faster than "general".
+These alternative methods should provide increasing speeds,
+  respectively.
+(Also for beta binomial, substitute "betabin" for "nbinom" in the
+  above.)
+From testing on RNA-seq data, the nbinom methods are roughly 5x, 10x and 50x faster than "general".
 Note that "nbinomC" uses C++ to find the MAP for the coefficients,
 but does not calculate or return the posterior SD or other quantities.
 "nbinomC*" is the same as "nbinomC", but includes a random start for finding the MAP.

@@ -75,8 +75,11 @@
 #' in a general way. Alternatives for faster performance with the Negative Binomial
 #' likelihood are:
 #' "nbinomR", "nbinomCR", and "nbinomC" / "nbinomC*"
-#' These alternative methods should provide increasing speeds, respectively.
-#' From testing on RNA-seq data, they are roughly 5x, 10x and 50x faster than "general".
+#' These alternative methods should provide increasing speeds,
+#'   respectively.
+#' (Also for beta binomial, substitute "betabin" for "nbinom" in the
+#'   above.)
+#' From testing on RNA-seq data, the nbinom methods are roughly 5x, 10x and 50x faster than "general".
 #' Note that "nbinomC" uses C++ to find the MAP for the coefficients,
 #' but does not calculate or return the posterior SD or other quantities.
 #' "nbinomC*" is the same as "nbinomC", but includes a random start for finding the MAP.
@@ -199,7 +202,9 @@ apeglm <- function(Y, x, log.lik,
                    ngrid.nuis=5, nsd.nuis=2,
                    log.link=TRUE,
                    param.sd=NULL,
-                   method=c("general","nbinomR","nbinomCR","nbinomC","nbinomC*"),
+                   method=c("general",
+                            "nbinomR","nbinomCR","nbinomC","nbinomC*",
+                            "betabinR", "betabinCR", "betabinC", "betabinC*"),
                    optim.method="BFGS",
                    bounds=c(-Inf,Inf)) {
 
@@ -216,6 +221,16 @@ apeglm <- function(Y, x, log.lik,
 
   interval.type <- match.arg(interval.type)
   method <- match.arg(method)
+
+  # with beta-binomial distribution, we may want to shrink the intercept
+  # (this is not the case for negative binomial)
+  # this flag allows for shrinkage of intercept
+  if (method %in% c("betabinR", "betabinCR", "betabinC", "betabinC*")) {
+    allow.shrink.intercept <- TRUE
+    log.link <- FALSE
+  } else {
+    allow.shrink.intercept <- FALSE
+  }
   
   stopifnot(ncol(Y) == nrow(x))
   stopifnot(multiplier > 0)  
@@ -299,8 +314,11 @@ apeglm <- function(Y, x, log.lik,
     if (!(is.numeric(coef) & coef==round(coef) & length(coef) == 1)){
       stop("coef must be numeric vector of length 1, and an integer")
     }
-    if (coef < 2 | coef > ncol(x)){
-      stop("'coef' must be between 2 and the number of columns of 'x'")
+    if (!allow.shrink.intercept & coef < 2) {
+      stop("'coef' must be greater than 2")
+    }
+    if (coef > ncol(x)) {
+      stop("'coef' must be less than or equal to the number of columns of 'x'")
     }
     result$fsr <- matrix(nrow=nrows, ncol=1,
                          dimnames=list(rownames, xnames[coef]))
@@ -333,69 +351,22 @@ apeglm <- function(Y, x, log.lik,
                                  dimnames=contrast.nms)
   }
 
-  # TODO eventually, break this out in sub-function
+  # fast routines for negative binomial in C++
   if (method %in% c("nbinomCR","nbinomC","nbinomC*")) {
-    nonzero <- rowSums(Y) > 0
-    # the C++ code uses transposed data (samples x genes)
-    YNZ <- t(Y[nonzero,,drop=FALSE])
-    if (is.null(weights)) {
-      weights <- matrix(1, nrow=nrow(Y), ncol=ncol(Y))
-    }
-    if (is.null(offset)) {
-      offset <- matrix(0, nrow=nrow(Y), ncol=ncol(Y))
-    }
-    weightsNZ <- t(weights[nonzero,,drop=FALSE])
-    offsetNZ <- t(offset[nonzero,,drop=FALSE])
-    size <- 1/param[nonzero]
-    sigma <- prior.control$prior.no.shrink.scale
-    S <- prior.control$prior.scale
-    no.shrink <- prior.control$no.shrink
-    shrink <- setdiff(seq_len(ncol(x)), no.shrink)
-    # now, estimate the scale of the function
-    init <- rep(0, ncol(x))
-    cnst <- sapply(seq_len(sum(nonzero)), function(i) {
-      nbinomFn(init, x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
-               offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
-               shrink=shrink, cnst=0)
-    })
-    cnst <- ifelse(cnst > 1, cnst, 1)
-    # now optimize over all rows using L-BFGS run in C++
-    # on a scaled version of the negative posterior.
-    # we run it twice to check for stability and issues w/ local maxima
-    if (method == "nbinomC*") {
-      init <- rnorm(ncol(x),0,.5)
-    } else {
-      init <- rep(c(.1,-.1),length.out=ncol(x))
-    }
-    out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
-                     offset=offsetNZ, sigma2=sigma^2, S2=S^2,
-                     no_shrink=no.shrink, shrink=shrink,
-                     init=init, cnst=cnst)
-    if (method == "nbinomCR") {
-      init2 <- rep(c(-.1,.1),length.out=ncol(x))
-      out2 <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
-                        offset=offsetNZ, sigma2=sigma^2, S2=S^2,
-                        no_shrink=no.shrink, shrink=shrink,
-                        init=init2, cnst=cnst)
-    }
-    ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
-    ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
-    ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
-    ##            shrink=shrink, cnst=0)/cnst[i] + 10
-    ## })
-    ## nas <- rep(NA, nrow(result$diag)); result$diag <- cbind(result$diag, valueR=nas)
-    ## result$diag[nonzero,"valueR"] <- valueR
-    result$map[nonzero,] <- t(out$betas)
-    result$diag[nonzero,"conv"] <- out$convergence
-    result$diag[nonzero,"value"] <- out$value
-    if (method == "nbinomCR") {
-      # if the two fits above disagree by .01, say it did not converge
-      delta <- apply(abs(out$betas - out2$betas), 2, max)
-      result$diag[nonzero,"conv"][delta > .01] <- -1
-    } else {
-      # nbinomC or nbinomC* just return the result
-      return(result)
-    }
+    result <- nbinomCppRoutine(Y, x, weights, offset, param,
+                               prior.control, method, result)
+  }
+
+  # ...likewise for beta binomial in C++
+  if (method %in% c("betabinC", "betabinCR", "betabinC*")) {
+    result <- betabinCppRoutine(Y, x, weights, offset, param,
+                                prior.control, method, result,
+                                bounds, optim.method)
+  }
+  
+  # nbinomC, nbinomC*, betabinC, or betabinC* just return the result
+  if (method %in% c("nbinomC","nbinomC*","betabinC","betabinC*")) {
+    return(result)
   }
   
   for (i in seq_len(nrows)) {
@@ -403,8 +374,8 @@ apeglm <- function(Y, x, log.lik,
     offset.row <- if (is.null(offset)) NULL else offset[i,]
     param.i <- if (is.null(param)) NULL else param[i,,drop=TRUE] # drop the dimension
     param.sd.i <- if (is.null(param.sd)) NULL else param.sd[i]
-    prefit.beta <- if (method == "nbinomCR") result$map[i,] else NULL
-    prefit.conv <- if (method == "nbinomCR") result$diag[i,"conv"] else NULL
+    prefit.beta <- if (method %in% c("nbinomCR","betabinCR")) result$map[i,] else NULL
+    prefit.conv <- if (method %in% c("nbinomCR","betabinCR")) result$diag[i,"conv"] else NULL
 
     row.result <- apeglm.single(y = Y[i,], x=x, log.lik=log.lik, 
       param=param.i, coef=coef, interval.type=interval.type, interval.level=interval.level,
@@ -487,8 +458,14 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
     return(out)
   }
 
+  zero.start <- method %in% c("betabinR","betabinCR")
+  
   if (is.null(prefit.beta)) {
-    init <- rep(c(1,-1),length.out=ncol(x))
+    if (zero.start) {
+      init <- rep(0,length.out=ncol(x))
+    } else {
+      init <- rep(c(1,-1),length.out=ncol(x))
+    }
     if (log.link) {
       if (basemean == 0) {
         init[1] <- 0
@@ -533,6 +510,21 @@ apeglm.single <- function(y, x, log.lik, param, coef, interval.type, interval.le
                          bounds=bounds,
                          optim.method=optim.method,
                          prefit.conv=prefit.conv)
+  } else if (method == "betabinR") {
+    theta <- param[1]
+    size <- param[-1]
+    o <- optimBetabin(init=init, y=y, x=x, size=size, 
+                      theta=theta, weights=weights,
+                      prior.control=prior.control,
+                      bounds=bounds,
+                      optim.method=optim.method)
+  } else if (method == "betabinCR") {
+    o <- optimBetabinHess(init=init, y=y, x=x, param=param,
+                          weights=weights,
+                          prior.control=prior.control,
+                          bounds=bounds,
+                          optim.method=optim.method,
+                          prefit.conv=prefit.conv)
   }
   
   map <- o$par
@@ -616,4 +608,145 @@ buildNAOut <- function(coef, interval.type, threshold, contrasts) {
     out$contrast.sd <- NA
   }
   out
+}
+
+nbinomCppRoutine <- function(Y, x, weights, offset, param,
+                             prior.control, method, result) {
+  nonzero <- rowSums(Y) > 0
+  # the C++ code uses transposed data (samples x genes)
+  YNZ <- t(Y[nonzero,,drop=FALSE])
+  if (is.null(weights)) {
+    weights <- matrix(1, nrow=nrow(Y), ncol=ncol(Y))
+  }
+  if (is.null(offset)) {
+    offset <- matrix(0, nrow=nrow(Y), ncol=ncol(Y))
+  }
+  weightsNZ <- t(weights[nonzero,,drop=FALSE])
+  offsetNZ <- t(offset[nonzero,,drop=FALSE])
+  size <- 1/param[nonzero]
+  sigma <- prior.control$prior.no.shrink.scale
+  S <- prior.control$prior.scale
+  no.shrink <- prior.control$no.shrink
+  shrink <- setdiff(seq_len(ncol(x)), no.shrink)
+  # now, estimate the scale of the function
+  init <- rep(0, ncol(x))
+  cnst <- sapply(seq_len(sum(nonzero)), function(i) {
+    nbinomFn(init, x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+             offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+             shrink=shrink, cnst=0)
+  })
+  cnst <- ifelse(cnst > 1, cnst, 1)
+  # now optimize over all rows using L-BFGS run in C++
+  # on a scaled version of the negative posterior.
+  # we run it twice to check for stability and issues w/ local maxima
+  if (method == "nbinomC*") {
+    init <- rnorm(ncol(x),0,.5)
+  } else {
+    init <- rep(c(.1,-.1),length.out=ncol(x))
+  }
+  out <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
+                   offset=offsetNZ, sigma2=sigma^2, S2=S^2,
+                   no_shrink=no.shrink, shrink=shrink,
+                   init=init, cnst=cnst)
+  if (method == "nbinomCR") {
+    init2 <- rep(c(-.1,.1),length.out=ncol(x))
+    out2 <- nbinomGLM(x=x, Y=YNZ, size=size, weights=weightsNZ,
+                      offset=offsetNZ, sigma2=sigma^2, S2=S^2,
+                      no_shrink=no.shrink, shrink=shrink,
+                      init=init2, cnst=cnst)
+  }
+  ## valueR <- sapply(seq_len(sum(nonzero)), function(i) {
+  ##   nbinomFn(out$beta[,i], x=x, y=YNZ[,i], size=size[i], weights=weightsNZ[,i],
+  ##            offset=offsetNZ[,i], sigma=sigma, S=S, no.shrink=no.shrink,
+  ##            shrink=shrink, cnst=0)/cnst[i] + 10
+  ## })
+  ## nas <- rep(NA, nrow(result$diag)); result$diag <- cbind(result$diag, valueR=nas)
+  ## result$diag[nonzero,"valueR"] <- valueR
+  result$map[nonzero,] <- t(out$betas)
+  result$diag[nonzero,"conv"] <- out$convergence
+  result$diag[nonzero,"value"] <- out$value
+  if (method == "nbinomCR") {
+    # if the two fits above disagree by .01, say it did not converge
+    delta <- apply(abs(out$betas - out2$betas), 2, max)
+    result$diag[nonzero,"conv"][delta > .01] <- -1
+  }
+  result
+}
+
+# beta-binomial fitting routine, written by Josh Zitovsky, Spring semester 2019
+betabinCppRoutine <- function(Y, x, weights, offset, param,
+                              prior.control, method, result,
+                              bounds, optim.method) {
+
+  # parameter for beta binomial
+  cap <- 0.001
+  
+  nonzero <- rowSums(Y) >= 0
+  YNZ <- t(Y[nonzero, , drop = FALSE])
+  if (is.null(weights)) {
+    weights <- matrix(1, nrow = nrow(Y), ncol = ncol(Y))
+  }
+  weightsNZ <- t(weights[nonzero, , drop = FALSE])
+  theta <- param[, 1]
+  size <- param[, -1]
+  sizeNZ <- t(size[nonzero, , drop = FALSE])
+  sigma <- prior.control$prior.no.shrink.scale
+  S <- prior.control$prior.scale
+  no.shrink <- prior.control$no.shrink
+  shrink <- setdiff(seq_len(ncol(x)), no.shrink)
+  if (method == "betabinC*") {
+    init <- rnorm(ncol(x),0,.5)
+  } else {
+    init <- rep(c(.1,-.1),length.out=ncol(x))
+  }
+  
+  # creating vector 'cnst' to scale likelihood and gradient
+  # and prevent very large/small values
+  initC <- c(3, rep(0, ncol(x)-1))                     
+  cnst <- sapply(seq_len(sum(nonzero)), function(i) {
+    betabinFn(initC, x=x, y=YNZ[,i], size=sizeNZ[,i], theta=theta[i], weights=weightsNZ[,i],
+              sigma=sigma, S=S, no.shrink=no.shrink,
+              shrink=shrink, cnst=0)
+  })
+  
+  cnst <- abs(cnst/100)
+  cnst <- ifelse(cnst > 1, cnst, 1)
+  lbd <- cap
+  ubd <- 1 / cap-1
+  tol <- 1e-8
+  out <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
+                    thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 
+                    S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
+                    init = init, cnst=cnst, tol=tol, lbd=lbd, ubd=ubd)
+
+  if (method == "betabinCR") {
+    init2 <- rep(c(-.1,.1),length.out=ncol(x))
+    out2 <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
+                       thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 
+                       S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
+                       init = init2, cnst=cnst, tol=tol, lbd=lbd, ubd=ubd)
+  }
+  result$map[nonzero,] <- t(out$betas)
+  result$diag[nonzero,"conv"] <- out$convergence
+  result$diag[nonzero,"value"] <- out$value
+  
+  # in the case that the C++ code got a lgamma(0) or
+  # something during optimization, re-run in R
+  no.number <- is.na(out$value)
+  need.change <- (1:nrow(result$map))[no.number]
+  for (i in need.change) {
+    o <- optimBetabin(init, Y[i,], x, size[i,], theta[i],
+                      weights[i,], prior.control,
+                      bounds, optim.method)
+    result$diag[i,"conv"] <- o$convergence
+    result$diag[i,"value"] <- o$value
+    result$map[i,] <- o$par
+  }
+  
+  if (method == "betabinCR") {
+    # if the two fits above disagree by .01, say it did not converge
+    delta <- apply(abs(out$betas - out2$betas), 2, max)
+    result$diag[nonzero,"conv"][delta > .01] <- -1
+  }
+  result
 }

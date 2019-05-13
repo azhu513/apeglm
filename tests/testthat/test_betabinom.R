@@ -35,7 +35,7 @@ test_that("example on beta-binomial", {
   theta.hat <- bbEstDisp(success=ase.cts, size=cts,
                          x=x, beta=fit.mle$map,
                          minDisp=1, maxDisp=500)
-
+  
   # we can also ask for standard errors for log of dispersion
   theta.fit <- bbEstDisp(success=ase.cts, size=cts,
                          x=x, beta=fit.mle$map,
@@ -47,15 +47,30 @@ test_that("example on beta-binomial", {
   coef <- 2
   mle <- cbind(fit.mle$map[,coef], fit.mle$sd[,coef])
   param <- cbind(theta.hat, cts)
+
   fit <- apeglm(Y=ase.cts, x=x, log.lik=betabinom.log.lik,
                 param=param, coef=coef, mle=mle, log.link=FALSE)
 
   #plot(beta.cond, fit$map[,2])
+
+  fitC <- apeglm(Y=ase.cts, x=x, method="betabinC",
+                 param=param, coef=coef, mle=mle)
+
+  fitCstar <- apeglm(Y=ase.cts, x=x, method="betabinC*",
+                     param=param, coef=coef, mle=mle)
+
+  fitR <- apeglm(Y=ase.cts, x=x, method="betabinR",
+                 param=param, coef=coef, mle=mle)
+
+  fitCR <- apeglm(Y=ase.cts, x=x, method="betabinCR",
+                  param=param, coef=coef, mle=mle)
   
-  # expect error:
-  expect_error({
-    apeglm(Y=ase.cts, x=x, log.lik=betabinom.log.lik,
-           param=param, coef=1, mle=mle, log.link=FALSE)
-  }, "must be between 2")
+  expect_equal(fit$map[,2], fitC$map[,2], tolerance=1e-3)
+  expect_equal(fit$map[,2], fitCstar$map[,2], tolerance=1e-3)
+  expect_equal(fit$map[,2], fitR$map[,2], tolerance=1e-3)
+  expect_equal(fit$map[,2], fitCR$map[,2], tolerance=1e-3)
+
+  expect_equal(fit$sd[,2], fitR$sd[,2], tolerance=1e-3)
+  expect_equal(fit$sd[,2], fitCR$sd[,2], tolerance=1e-3)
   
 })
