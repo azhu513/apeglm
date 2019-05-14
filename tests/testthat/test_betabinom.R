@@ -7,7 +7,7 @@ test_that("example on beta-binomial", {
   n.per.group <- 20
   n <- 2 * n.per.group
   condition <- factor(rep(1:2,each=n.per.group))
-  m <- 100
+  m <- 5000 # 100
   cts <- matrix(rnbinom(m*n, mu=200, size=1/.1), ncol=n)
   theta <- runif(m,1,100)
   
@@ -52,10 +52,11 @@ test_that("example on beta-binomial", {
                 param=param, coef=coef, mle=mle, log.link=FALSE)
 
   #plot(beta.cond, fit$map[,2])
-
+  system.time({
   fitC <- apeglm(Y=ase.cts, x=x, method="betabinC",
                  param=param, coef=coef, mle=mle)
-
+  })
+  
   fitCstar <- apeglm(Y=ase.cts, x=x, method="betabinC*",
                      param=param, coef=coef, mle=mle)
 

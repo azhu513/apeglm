@@ -712,7 +712,7 @@ betabinCppRoutine <- function(Y, x, weights, offset, param,
   cnst <- abs(cnst/100)
   cnst <- ifelse(cnst > 1, cnst, 1)
   lbd <- cap
-  ubd <- 1 / cap-1
+  ubd <- 1/cap - 1
   tol <- 1e-8
   out <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
                     thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 

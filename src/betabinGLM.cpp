@@ -52,10 +52,10 @@ public:
     Eigen::ArrayXd e2 = y + thetap;
     Eigen::ArrayXd e3 = theta - thetap;
     Eigen::ArrayXd lik_parts = e1.lgamma() + 
-                              e2.lgamma() -
-                              e3.lgamma() -
-                              thetap.lgamma();
-    Eigen::ArrayXd weighted_parts = lik_parts*weight;
+                               e2.lgamma() -
+                               e3.lgamma() -
+                               thetap.lgamma();
+    Eigen::ArrayXd weighted_parts = lik_parts * weight;
     double neg_obs = -1 * weighted_parts.sum(); //beta-binomial negative log-likelihood
   
     Eigen::ArrayXd e4 = theta*exp_neg_xbeta/pow(1+exp_neg_xbeta, 2);
@@ -82,7 +82,7 @@ public:
     // this is the negative log posterior, scaled,
     // plus a constant to keep the values somewhat small (and not too close to zero)
     double cn = cnst[i];
-    double f = (neg_obs + neg_prior)/cn + 90;
+    const double f = (neg_obs + neg_prior)/cn + 10.0;
 
     // this is the gradient of the negative log posterior, scaled
     grad = (d_neg_obs + d_neg_prior)/cn;
@@ -94,9 +94,9 @@ public:
 // [[Rcpp::export]]
 Rcpp::List betabinGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
 		      Rcpp::NumericMatrix sizes, Rcpp::NumericVector thetas, 
-			Rcpp::NumericMatrix weights,double sigma2, double S2,
-			Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
-			Rcpp::NumericVector init, Rcpp::NumericVector cnst, double tol, double lbd, double ubd)
+		      Rcpp::NumericMatrix weights,double sigma2, double S2,
+		      Rcpp::NumericVector no_shrink, Rcpp::NumericVector shrink,
+		      Rcpp::NumericVector init, Rcpp::NumericVector cnst, double tol, double lbd, double ubd)
 {
 
   // this optimization code is modeled after the RcppNumerical example:
@@ -129,7 +129,6 @@ Rcpp::List betabinGLM(Rcpp::NumericMatrix x, Rcpp::NumericMatrix Y,
     optimFunBeta nll(mx, mY, msizes, mthetas, mweights, sigma2, S2, mno_shrink, mshrink, mcnst, i, lbd, ubd);
     beta = minit;
     int status = optim_lbfgs(nll, beta, fopt, 300, tol, 1e-8);
-
     betas.col(i) = beta;
     value[i] = fopt;
     convergence[i] = status;
