@@ -719,13 +719,13 @@ betabinCppRoutine <- function(Y, x, weights, offset, param,
                     S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
                     init = init, cnst=cnst, tol=tol, lbd=lbd, ubd=ubd)
 
-  if (method == "betabinCR") {
-    init2 <- rep(c(-.1,.1),length.out=ncol(x))
-    out2 <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
-                       thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 
-                       S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
-                       init = init2, cnst=cnst, tol=tol, lbd=lbd, ubd=ubd)
-  }
+  ## if (method == "betabinCR") {
+  ##   init2 <- rep(c(-.1,.1),length.out=ncol(x))
+  ##   out2 <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
+  ##                      thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 
+  ##                      S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
+  ##                      init = init2, cnst=cnst, tol=tol, lbd=lbd, ubd=ubd)
+  ## }
   result$map[nonzero,] <- t(out$betas)
   result$diag[nonzero,"conv"] <- out$convergence
   result$diag[nonzero,"value"] <- out$value
@@ -743,10 +743,10 @@ betabinCppRoutine <- function(Y, x, weights, offset, param,
     result$map[i,] <- o$par
   }
   
-  if (method == "betabinCR") {
-    # if the two fits above disagree by .01, say it did not converge
-    delta <- apply(abs(out$betas - out2$betas), 2, max)
-    result$diag[nonzero,"conv"][delta > .01] <- -1
-  }
+  ## if (method == "betabinCR") {
+  ##   # if the two fits above disagree by .01, say it did not converge
+  ##   delta <- apply(abs(out$betas - out2$betas), 2, max)
+  ##   result$diag[nonzero,"conv"][delta > .01] <- -1
+  ## }
   result
 }
