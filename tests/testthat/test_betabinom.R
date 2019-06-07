@@ -7,7 +7,7 @@ test_that("example on beta-binomial", {
   n.per.group <- 20
   n <- 2 * n.per.group
   condition <- factor(rep(1:2,each=n.per.group))
-  m <- 5000 # 100
+  m <- 100
   cts <- matrix(rnbinom(m*n, mu=200, size=1/.1), ncol=n)
   theta <- runif(m,1,100)
   
