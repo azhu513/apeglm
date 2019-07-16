@@ -22,7 +22,7 @@ vignette: |
 <!-- run this document with library(rmarkdown); render("apeglm.Rmd") -->
 
 ```{r setup, echo=FALSE, results="hide"}
-knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
+knitr::opts_chunk$set(tidy=FALSE, cache=FALSE,
                       dev="png",
                       message=FALSE, error=FALSE, warning=TRUE)
 ```
@@ -43,6 +43,18 @@ while *apeglm* provides coefficients on the natural log scale.
 ```{r,eval=FALSE}
 res <- lfcShrink(dds, coef=2, type="apeglm")
 ```
+
+# Acknowledgments
+
+Joshua Zitovsky contributed fast C++ code for the beta-binomial
+likelihood, demonstrated in a later section of the vignette.
+
+We have benefited in the development of `apeglm` from feedback or
+contributions from the following individuals:
+
+Wolfgang Huber,
+Cecile Le Sueur,
+Charlotte Soneson
 
 # Example RNA-seq analysis
 
@@ -298,8 +310,12 @@ ase.cts[idx,idx2] <- matrix(rbetabinom(length(idx)*length(idx2), prob=prob[idx],
                             nrow=length(idx))
 ```
 
-We define a beta-binomial likelihood function which uses the total counts
-as a parameter, and the logit function as a link:
+We first need to estimate MLE coefficients and standard errors.
+
+One option to run `apeglm` would be to define a beta-binomial
+likelihood function which uses the total counts as a parameter, and
+the logit function as a link. And then this function could be provided
+to the `log.lik` argument. 
 
 ```{r}
 betabinom.log.lik <- function(y, x, beta, param, offset) {
@@ -309,44 +325,53 @@ betabinom.log.lik <- function(y, x, beta, param, offset) {
 }
 ```
 
-We first need to estimate MLE coefficients and standard errors.
+However, `apeglm` has faster C++ implementations for the beta-binomial,
+which were implemented and tested by Joshua Zitovsky. Here, using
+`method="betabinCR"` is 3 times faster than using the R-defined
+`log.lik`, and the `"betabinCR"` method also scales significantly
+better with more samples and more coefficients. As with the negative
+binomial, `method="betabinC"` can be used if the standard errors are
+not needed, and this will be 5 times faster than the R-defined
+`log.lik` approach on this dataset.
+
+The following code performs two iterations of estimating the MLE
+coefficients, and then estimating the beta-binomial dispersion.
 
 ```{r}
-theta.hat.0 <- 100 # rough estimate of dispersion
-param <- cbind(theta.hat.0, cts)
+theta.hat <- 100 # rough initial estimate of dispersion
 x <- model.matrix(~f)
-system.time({
-  fit.mle <- apeglm(Y=ase.cts, x=x,
-                    log.lik=betabinom.log.lik,
-                    param=param,
-                    no.shrink=TRUE,
-                    log.link=FALSE)
-})
+niter <- 2
+for (i in 1:niter) {
+  param <- cbind(theta.hat, cts)
+  system.time({
+    fit.mle <- apeglm(Y=ase.cts, x=x, log.lik=NULL, param=param,
+                      no.shrink=TRUE, log.link=FALSE, method="betabinCR")
+  })
+  theta.hat <- bbEstDisp(success=ase.cts, size=cts,
+                         x=x, beta=fit.mle$map,
+                         minDisp=1, maxDisp=500)
+}
 ```
+
+We can then plot the MLE estimates over the mean:
 
 ```{r mlemaplot}
 coef <- 2
+xlab <- "mean of normalized counts"
 plot(res$baseMean, fit.mle$map[,coef], log="x", xlab=xlab, ylab="log odds")
 points(res$baseMean[idx], fit.mle$map[idx,coef], col="dodgerblue", cex=3)
 ```
 
-```{r}
-theta.hat <- bbEstDisp(success=ase.cts, size=cts,
-                       x=x, beta=fit.mle$map,
-                       minDisp=1, maxDisp=500)
-```
+Now we run the posterior estimation, including a prior on the second
+coefficient:
 
 ```{r}
 mle <- cbind(fit.mle$map[,coef], fit.mle$sd[,coef])
 param <- cbind(theta.hat, cts)
 system.time({
-  fit2 <- apeglm(Y=ase.cts, x=x,
-                 log.lik=betabinom.log.lik,
-                 param=param,
-                 coef=coef,
-                 mle=mle,
-                 threshold=0.5,
-                 log.link=FALSE)
+  fit2 <- apeglm(Y=ase.cts, x=x, log.lik=NULL, param=param,
+                 coef=coef, mle=mle, threshold=0.5,
+                 log.link=FALSE, method="betabinCR")
 })
 ```
 
@@ -375,15 +400,6 @@ logit <- function(x) log(x/(1-x))
 logit(.75)
 table(abs(logit(prob[s.val < .01])) > .5)
 ```
-
-# Acknowledgments
-
-We have benefited in the development of `apeglm` from feedback or
-contributions from the following individuals:
-
-Wolfgang Huber,
-Cecile Le Sueur,
-Charlotte Soneson
 
 # Session Info
 

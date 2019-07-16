@@ -1,2 +1,4 @@
 vignettes
 inst/math
+*.o
+*.so
