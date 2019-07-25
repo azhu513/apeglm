@@ -709,11 +709,11 @@ betabinCppRoutine <- function(Y, x, weights, offset, param,
               shrink=shrink, cnst=0)
   })
   
-  cnst <- abs(cnst/100)
-  cnst <- ifelse(cnst > 1, cnst, 1)
+  cnst <- abs(cnst)
+  cnst <- ifelse(cnst > 100, cnst, 100)
   lbd <- cap
   ubd <- 1/cap - 1
-  tol <- 1e-8
+  tol <- 1e-12
   out <- betabinGLM(x = x, Y = YNZ, sizes = sizeNZ, 
                     thetas = theta, weights = weightsNZ, sigma2 = sigma^2, 
                     S2 = S^2, no_shrink = no.shrink, shrink = shrink, 
