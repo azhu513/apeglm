@@ -20,7 +20,9 @@ If Y is a SummarizedExperiment, \code{apeglm} will return, in addition
 to other list items, a GRanges or GRangesList \code{ranges} with the
 estimated coefficients as metadata columns.}
 
-\item{x}{design matrix, with intercept in the first column}
+\item{x}{design matrix, with intercept in the first column.
+Continuous-valued columns should be centered and scaled to unit variance,
+or at least set so that the scale (in SD) is not very large or very small}
 
 \item{log.lik}{the log of likelihood function, specified by the user.
 For Negative Binomial distribution, user can use \code{logLikNB} provided within the package.}
