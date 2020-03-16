@@ -4,14 +4,34 @@
 \alias{apeglm}
 \title{Approximate posterior estimation for GLM coefficients}
 \usage{
-apeglm(Y, x, log.lik, param = NULL, coef = NULL, mle = NULL,
-  no.shrink = FALSE, interval.type = c("laplace", "HPD", "credible"),
-  interval.level = 0.95, threshold = NULL, contrasts, weights = NULL,
-  offset = NULL, flip.sign = TRUE, prior.control, multiplier = 1,
-  ngrid = 50, nsd = 5, ngrid.nuis = 5, nsd.nuis = 2,
-  log.link = TRUE, param.sd = NULL, method = c("general", "nbinomR",
-  "nbinomCR", "nbinomC", "nbinomC*", "betabinR", "betabinCR", "betabinC",
-  "betabinC*"), optim.method = "BFGS", bounds = c(-Inf, Inf))
+apeglm(
+  Y,
+  x,
+  log.lik,
+  param = NULL,
+  coef = NULL,
+  mle = NULL,
+  no.shrink = FALSE,
+  interval.type = c("laplace", "HPD", "credible"),
+  interval.level = 0.95,
+  threshold = NULL,
+  contrasts,
+  weights = NULL,
+  offset = NULL,
+  flip.sign = TRUE,
+  prior.control,
+  multiplier = 1,
+  ngrid = 50,
+  nsd = 5,
+  ngrid.nuis = 5,
+  nsd.nuis = 2,
+  log.link = TRUE,
+  param.sd = NULL,
+  method = c("general", "nbinomR", "nbinomCR", "nbinomC", "nbinomC*", "betabinR",
+    "betabinCR", "betabinC", "betabinC*"),
+  optim.method = "BFGS",
+  bounds = c(-Inf, Inf)
+)
 }
 \arguments{
 \item{Y}{the observations, which can be a matrix or SummarizedExperiment,

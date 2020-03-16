@@ -4,8 +4,7 @@
 \alias{bbEstDisp}
 \title{Simple line-search estimator for dispersion of a beta binomial}
 \usage{
-bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp,
-  se = FALSE)
+bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp, se = FALSE)
 }
 \arguments{
 \item{success}{the observed successes (a matrix)}
@@ -23,7 +22,9 @@ bbEstDisp(success, size, weights = 1, x, beta, minDisp, maxDisp,
 \item{maxDisp}{the maximum dispersion value}
 
 \item{se}{logical, whether to return standard error estimate on the log of
-the dispersion (theta)}
+the dispersion (theta). Warning: the standard error estimates are not
+reliable at the boundary (log of minDisp and maxDisp), and should be
+interpreted with caution!}
 }
 \value{
 a vector of estimated dispersions (theta). if \code{se=TRUE} a matrix

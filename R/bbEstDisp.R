@@ -15,7 +15,9 @@
 #' @param minDisp the minimum dispersion value
 #' @param maxDisp the maximum dispersion value
 #' @param se logical, whether to return standard error estimate on the log of
-#' the dispersion (theta)
+#' the dispersion (theta). Warning: the standard error estimates are not
+#' reliable at the boundary (log of minDisp and maxDisp), and should be
+#' interpreted with caution!
 #'
 #' @return a vector of estimated dispersions (theta). if \code{se=TRUE} a matrix
 #' with columns: the vector of estimated dispersions and the standard
