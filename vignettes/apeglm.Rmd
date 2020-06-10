@@ -168,7 +168,10 @@ class(fit$ranges)
 mcols(fit$ranges, use.names=TRUE)
 ```
 
-We can compare the coefficients from *apeglm* with those from *DESeq2*.
+We can compare the coefficients from *apeglm* with the `"normal"`
+shrinkage type from the original *DESeq2* paper (2014). This method,
+which makes use of a Normal-based prior, is no longer the default
+shrinkage estimator for `lfcShrink`.
 *apeglm* provides coefficients on the natural log scale, so we must
 convert to log2 scale by multiplying by `log2(exp(1))`. Note that
 *DESeq2*'s `lfcShrink` function converts *apeglm* coefficients to the log2
@@ -176,7 +179,7 @@ scale internally.
 
 ```{r}
 system.time({
-  res.shr <- lfcShrink(dds, coef=5)
+  res.shr <- lfcShrink(dds, coef=5, type="normal")
 })
 DESeq2.lfc <- res.shr$log2FoldChange
 apeglm.lfc <- log2(exp(1)) * fit$map[,5]
@@ -253,7 +256,10 @@ probabilities of false-sign-or-small events.
 ```{r maplotthresh}
 s.val <- svalue(fit$thresh)
 cols <- ifelse(s.val < .01, "red", "black")
-plot(res$baseMean, log2(exp(1)) * fit$map[,5], log="x", col=cols,
+keep <- res$baseMean > 10 # filter for plot
+plot(res$baseMean[keep],
+     log2(exp(1)) * fit$map[keep,5],
+     log="x", col=cols[keep],
      xlab=xlab, ylab="LFC")
 abline(h=c(-1,0,1), col=rgb(1,0,0,.5), lwd=2)
 ```
@@ -340,17 +346,17 @@ coefficients, and then estimating the beta-binomial dispersion.
 ```{r}
 theta.hat <- 100 # rough initial estimate of dispersion
 x <- model.matrix(~f)
-niter <- 2
-for (i in 1:niter) {
-  param <- cbind(theta.hat, cts)
-  system.time({
+niter <- 3
+system.time({
+  for (i in 1:niter) {
+    param <- cbind(theta.hat, cts)
     fit.mle <- apeglm(Y=ase.cts, x=x, log.lik=NULL, param=param,
                       no.shrink=TRUE, log.link=FALSE, method="betabinCR")
-  })
-  theta.hat <- bbEstDisp(success=ase.cts, size=cts,
-                         x=x, beta=fit.mle$map,
-                         minDisp=1, maxDisp=500)
-}
+    theta.hat <- bbEstDisp(success=ase.cts, size=cts,
+                           x=x, beta=fit.mle$map,
+                           minDisp=.01, maxDisp=5000)
+  }
+})
 ```
 
 We can then plot the MLE estimates over the mean:
