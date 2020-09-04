@@ -690,7 +690,7 @@ betabinCppRoutine <- function(Y, x, weights, offset, param,
   }
   weightsNZ <- t(weights[nonzero, , drop = FALSE])
   theta <- param[, 1]
-  size <- param[, -1]
+  size <- param[, -1, drop = FALSE]
   sizeNZ <- t(size[nonzero, , drop = FALSE])
   sigma <- prior.control$prior.no.shrink.scale
   S <- prior.control$prior.scale
