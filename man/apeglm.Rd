@@ -52,7 +52,7 @@ e.g. the dispersion parameter for a negative binomial distribution.
 this can be a vector or a matrix (with columns as parameters)}
 
 \item{coef}{(optional) the index of the coefficient for which
-to generate posterior estimates (FSR and intervals)}
+to generate posterior estimates (FSR, svalue, and intervals)}
 
 \item{mle}{(optional) a 2 column matrix giving the MLE and its standard error
 of \code{coef}. this will be used to adapt the scale of the prior (empirical Bayes).
@@ -137,6 +137,7 @@ a list of matrices containing the following components:
   \item \code{sd}: matrix of posterior SD, same shape as \code{map}
   \item \code{prior.control}: list with details on the prior
   \item \code{fsr}: vector of the false sign rate for \code{coef}
+  \item \code{svalue}: vector of the s-values for \code{coef} 
   \item \code{interval}: matrix of either HPD or credible interval for \code{coef}
   \item \code{thresh}: vector of the posterior probability that the estimated parameter 
 is smaller than the threshold value specified in \code{threshold}
