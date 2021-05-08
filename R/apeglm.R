@@ -228,7 +228,7 @@ apeglm <- function(Y, x, log.lik,
   # with beta-binomial distribution, we may want to shrink the intercept
   # (this is not the case for negative binomial)
   # this flag allows for shrinkage of intercept
-  if (method %in% c("betabinR", "betabinCR", "betabinC", "betabinC*")) {
+  if (method %in% c("general", "betabinR", "betabinCR", "betabinC", "betabinC*")) {
     allow.shrink.intercept <- TRUE
     log.link <- FALSE
   } else {
