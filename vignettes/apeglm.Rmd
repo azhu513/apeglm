@@ -40,7 +40,7 @@ or by number (following the order in `resultsNames(dds)`). Be aware
 that *DESeq2*'s `lfcShrink` interface provides LFCs on the log2 scale,
 while *apeglm* provides coefficients on the natural log scale.
 
-```{r,eval=FALSE}
+```{r, eval=FALSE}
 res <- lfcShrink(dds, coef=2, type="apeglm")
 ```
 
@@ -69,11 +69,11 @@ data(airway)
 head(assay(airway))
 ```
 
-For demonstration, we will use 5000 genes of the `airway` dataset,
+For demonstration, we will use 3000 genes of the `airway` dataset,
 the first from those genes with at least 10 counts across all samples.
 
 ```{r}
-keep <- head(which(rowSums(assay(airway)) > 0), 5000)
+keep <- head(which(rowSums(assay(airway)) >= 10), 3000)
 airway <- airway[keep,]
 ```
 
@@ -106,7 +106,7 @@ offset <- matrix(log(sizeFactors(dds)),
 
 # Running apeglm
 
-Here `apeglm` on 5000 genes takes less than a minute on a laptop.
+Here `apeglm` on 3000 genes takes a few seconds on a laptop.
 It scales with number of genes, the number of samples and the number
 of variables in the design formula, where here we have 5 coefficients
 (one for the four cell cultures and one for the difference due to
@@ -118,27 +118,37 @@ We specify a `coef` as well as a `threshold` which we discuss
 below. Note that we multiple the `threshold` by `log(2)` to convert
 from log2 scale to natural log scale. 
 
+The original interface to apeglm looked as follows, but was slow, we
+therefore recommend using the faster interfaces shown below.
+
+```{r eval=FALSE}
+# original interface, also may give Lapack error
+fit <- apeglm(Y=airway, x=x, log.lik=logLikNB, param=param, coef=ncol(x),
+              threshold=log(2) * 1, mle=mle, offset=offset)
+```
+
+There are better, faster implementations of apeglm specifically for
+negative binomial likelihoods. The version `nbinomR` is ~5 times
+faster than the default `method="general"`. 
+
+We will use this run for downstream analysis. Here we pass the
+*SummarizedExperiment*, which will pass back the ranges. For faster
+`apeglm` runs, provide only the counts matrix (as seen in subsequent
+chunks).
+
 ```{r}
 library(apeglm)
 system.time({
-  fit <- apeglm(Y=airway, x=x, log.lik=logLikNB, param=param, coef=ncol(x),
-                threshold=log(2) * 1, mle=mle, offset=offset)
+  fitR <- apeglm(Y=airway, x=x, log.lik=NULL, param=param, coef=ncol(x),
+                 threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomR")
 })
+fit <- fitR
+names(fit)
 str(fit$prior.control)
 ```
 
-There are faster implementations of apeglm specifically for negative
-binomial likelihoods. The version `nbinomR` is ~5 times
-faster than the default `general`. 
-
-```{r}
-system.time({
-  fitR <- apeglm(Y=assay(airway), x=x, log.lik=NULL, param=param, coef=ncol(x),
-                 threshold=log(2) * 1, mle=mle, offset=offset, method="nbinomR")
-})
-```
-
-The version `nbinomCR` is ~10 times faster than the default `general`.
+The version `nbinomCR` is ~10 times faster than the default
+`general`. 
 
 ```{r}
 system.time({

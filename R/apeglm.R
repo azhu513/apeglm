@@ -369,6 +369,10 @@ apeglm <- function(Y, x, log.lik,
   
   # nbinomC, nbinomC*, betabinC, or betabinC* just return the result
   if (method %in% c("nbinomC","nbinomC*","betabinC","betabinC*")) {
+    if (hasRanges) {
+      mcols(ranges) <- result$map
+      result$ranges <- ranges
+    }
     return(result)
   }
   
