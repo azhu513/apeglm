@@ -53,12 +53,13 @@ test_that("nbinom cases works", {
                 offset=offset,
                 coef=2))
 
-  # error for coef not > 1
-  expect_error(apeglm(Y=Y, x=x,
-                      log.lik=logLikNB,
-                      param=param,
-                      offset=offset,
-                      coef=1))
+  # no longer an error when method="general"
+  # (error for coef not > 1)
+  ## expect_error(apeglm(Y=Y, x=x,
+  ##                     log.lik=logLikNB,
+  ##                     param=param,
+  ##                     offset=offset,
+  ##                     coef=1))
   
   # error for threshold not > 0
   expect_error(apeglm(Y=Y, x=x,
