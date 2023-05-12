@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.23.1
+------------------------
+
+    o Sometimes prefit.beta was NaN, now properly handled in apeglm().
+      Resolves some "Error in optimHess" issue propagated to DESeq2.
+    
 CHANGES IN VERSION 1.8.0
 ------------------------
 

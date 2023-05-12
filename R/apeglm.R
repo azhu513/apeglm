@@ -382,6 +382,9 @@ apeglm <- function(Y, x, log.lik,
     param.i <- if (is.null(param)) NULL else param[i,,drop=TRUE] # drop the dimension
     param.sd.i <- if (is.null(param.sd)) NULL else param.sd[i]
     prefit.beta <- if (method %in% c("nbinomCR","betabinCR")) result$map[i,] else NULL
+    if (any(is.nan(prefit.beta))) {
+      prefit.beta <- NULL # occasionally the pre-fitting gives NaN (noticed in Bioc 3.17...)
+    }
     prefit.conv <- if (method %in% c("nbinomCR","betabinCR")) result$diag[i,"conv"] else NULL
 
     row.result <- apeglm.single(y = Y[i,], x=x, log.lik=log.lik, 
