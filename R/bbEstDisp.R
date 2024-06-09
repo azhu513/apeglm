@@ -63,7 +63,15 @@ bbEstDisp <- function(success, size, weights=1, x, beta, minDisp, maxDisp, se=FA
   minld <- log(minDisp)
   maxld <- log(maxDisp)
   for (i in seq_len(nrow(success))) {
-    f <- function(logtheta,i) sum(weights *
+
+    # extract one row of weights
+    if (is.matrix(weights)) {
+      w <- weights[i,]
+    } else {
+      w <- weights
+    }
+    
+    f <- function(logtheta,i) sum(w *
                                   dbetabinom(success[i,],
                                              prob=p.hat[i,],
                                              size=size[i,],
